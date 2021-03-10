@@ -28,7 +28,7 @@ jobs:
               run: |
                   curl https://raw.githubusercontent.com/asozialesnetzwerk/chat-configs/main/config.json > config.json
                   curl https://raw.githubusercontent.com/asozialesnetzwerk/chat-configs/main/customize.sh > customize.sh
-                  sed -i s/webapp/target/g
+                  sed -i s/webapp/target/g customize.sh
            # - name: Fix Footer
              # run: curl https://raw.githubusercontent.com/asozialesnetzwerk/chat-configs/main/VectorAuthFooter.js > src/components/views/auth/VectorAuthFooter.js
               #easy way: run: sed -i 's|<a href="https://matrix.org" target="_blank" rel="noreferrer noopener">{ _t(.Powered by Matrix.) }</a>| |g' src/components/views/auth/VectorAuthFooter.js
