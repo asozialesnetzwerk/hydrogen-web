@@ -47,6 +47,10 @@ limitations under the License.
 html {
     height: 100%;
 }
+/* unknown element in IE11 that defaults to inline */
+main {
+    display: block;
+}
 @media screen and (min-width: 600px) {
     .PreSessionScreen {
         width: 600px;
@@ -55,38 +59,119 @@ html {
         margin-top: 50px;
     }
 }
-.SessionView {
+.room-placeholder {
     display: flex;
-    flex-direction: column;
-    height: 100vh;
+    flex-direction: row;
 }
-.SessionView > .main {
-    flex: 1 1;
-    display: flex;
+.SessionView {
+    /* this takes into account whether or not the url bar is hidden on mobile
+    (have tested Firefox Android and Safari on iOS),
+    see https://developers.google.com/web/updates/2016/12/url-bar-resizing */
+    position: fixed;
+    height: 100%;
+    width: 100%;
+    display: -ms-grid;
+    display: grid;
+    -ms-grid-rows: auto 1fr;
+    -ms-grid-columns: 300px 1fr;
+        grid-template:
+        "status status" auto
+        "left   middle" 1fr /
+        300px   1fr;
     min-height: 0;
     min-width: 0;
-    width: 100vw;
 }
+/* hide back button in middle section by default */
+.middle .close-middle { display: none; }
 /* mobile layout */
 @media screen and (max-width: 800px) {
-    .RoomHeader button.back { display: block; }
-    div.RoomView, div.RoomPlaceholderView { display: none; }
-    div.LeftPanel {flex-grow: 1;}
-    div.room-shown div.RoomView { display: flex; }
-    div.room-shown div.LeftPanel { display: none; }
-    div.right-shown div.TimelinePanel { display: none; }
+    .SessionView:not(.middle-shown) {
+        -ms-grid-rows: auto 1fr;
+        -ms-grid-columns: 1fr;
+            grid-template:
+            "status" auto
+            "left" 1fr /
+            1fr;
+    }
+
+    .SessionView.middle-shown {
+        -ms-grid-rows: auto 1fr;
+        -ms-grid-columns: 1fr;
+            grid-template:
+            "status" auto
+            "middle" 1fr /
+            1fr;
+    }
+
+    .SessionView:not(.middle-shown) .room-placeholder { display: none; }
+    .SessionView.middle-shown .LeftPanel { display: none; }
+
+    /* show back button */
+    .middle .close-middle { display: block !important; }
+    /* hide grid button */
+    .LeftPanel .grid { display: none !important; }
 }
 .LeftPanel {
-    flex: 0 0 300px;
+    -ms-grid-row: 2;
+    -ms-grid-column: 1;
+    grid-area: left;
     min-width: 0;
+    min-height: 0;
 }
-.RoomPlaceholderView, .RoomView {
-    flex: 1 0;
+.room-placeholder, .middle {
+    -ms-grid-row: 2;
+    -ms-grid-column: 2;
     min-width: 0;
+    grid-area: middle;
+    /* when room view is inside of a grid,
+    grid-area middle won't be found,
+    so set width manually */
+    width: 100%;
+    /* otherwise we don't get scrollbars and the content grows as large as it can */
+    min-height: 0;
+    /* make popups relative to this element so changing the left panel width doesn't affect their position */
+    position: relative;
 }
 .RoomView {
     min-width: 0;
+    min-height: 0;
     display: flex;
+}
+.SessionStatusView {
+    -ms-grid-row: 1;
+    -ms-grid-column: 1;
+    -ms-grid-column-span: 2;
+    grid-area: status;
+}
+@media screen and (max-width: 800px) {
+    .SessionView:not(.middle-shown) > .LeftPanel {
+    -ms-grid-row: 2;
+    -ms-grid-column: 1;
+    }
+
+    .SessionView.middle-shown > .room-placeholder, .SessionView.middle-shown > .middle {
+    -ms-grid-row: 2;
+    -ms-grid-column: 1;
+    }
+    .SessionView:not(.middle-shown) > .SessionStatusView {
+    -ms-grid-row: 1;
+    -ms-grid-column: 1;
+    -ms-grid-column-span: 1;
+    }
+
+    .SessionView.middle-shown > .SessionStatusView {
+    -ms-grid-row: 1;
+    -ms-grid-column: 1;
+    -ms-grid-column-span: 1;
+    }
+}
+.lightbox {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1;
 }
 .TimelinePanel {
     flex: 3 1;
@@ -96,11 +181,50 @@ html {
     flex-direction: column;
     height: 100%;
 }
-.TimelinePanel ul {
+.TimelinePanel .Timeline, .TimelinePanel .TimelineLoadingView {
     flex: 1 0;
 }
-.RoomHeader {
+.middle-header {
     display: flex;
+}
+.RoomGridView {
+    display: -ms-grid;
+    display: grid;
+}
+.RoomGridView.layout3x2 {
+    -ms-grid-rows: 1fr 1fr;
+    -ms-grid-columns: 1fr 1fr 1fr;
+        grid-template:
+        "t0  t1  t2" 1fr
+        "t3  t4  t5" 1fr /
+         1fr 1fr 1fr;
+}
+.RoomGridView > .tile0 {-ms-grid-row: 1;-ms-grid-column: 1;grid-area: t0;}
+.RoomGridView > .tile1 {-ms-grid-row: 1;-ms-grid-column: 2;grid-area: t1;}
+.RoomGridView > .tile2 {-ms-grid-row: 1;-ms-grid-column: 3;grid-area: t2;}
+.RoomGridView > .tile3 {-ms-grid-row: 2;-ms-grid-column: 1;grid-area: t3;}
+.RoomGridView > .tile4 {-ms-grid-row: 2;-ms-grid-column: 2;grid-area: t4;}
+.RoomGridView > .tile5 {-ms-grid-row: 2;-ms-grid-column: 3;grid-area: t5;}
+.RoomGridView > div {
+    display: flex;
+    min-width: 0;
+    min-height: 0;
+}
+.RoomGridView > div.focus-ring {
+    z-index: 1;
+    pointer-events: none;
+}
+.menu {
+    position: absolute;
+    z-index: 2;
+}
+.Settings {
+    display: flex;
+    flex-direction: column;
+}
+.SettingsBody {
+    min-height: 0;
+    overflow-y: auto;
 }
 /*
 Copyright 2020 Bruno Windels <bruno@windels.cloud>
@@ -133,7 +257,9 @@ limitations under the License.
     cursor: pointer;
     display: flex;
     align-items: center;
-    gap: 10px;
+}
+.SessionPickerView .session-info > :not(:first-child) {
+    margin-left: 8px;
 }
 .SessionPickerView li .user-id {
     flex: 1 1;
@@ -144,12 +270,15 @@ limitations under the License.
 .LoginView {
     padding: 0.4em;
 }
-.SessionLoadView {
+.SessionLoadStatusView {
     display: flex;
 }
-.SessionLoadView p {
+.SessionLoadStatusView > :not(:first-child) {
+    margin-left: 12px;
+}
+.SessionLoadStatusView p {
     flex: 1 1;
-    margin: 0 0 0 10px;
+    margin: 0;
 }
 /*
 Copyright 2020 Bruno Windels <bruno@windels.cloud>
@@ -167,27 +296,42 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 .LeftPanel {
-    overflow-y: auto;
-    overscroll-behavior: contain;
+    display: flex;
+    flex-direction: column;
+}
+.LeftPanel .utilities {
+    display: flex;
+}
+.LeftPanel .utilities .FilterField {
+    flex: 1 1;
+    min-width: 0;
 }
 .LeftPanel ul {
     list-style: none;
     padding: 0;
     margin: 0;
 }
-.LeftPanel li {
+.RoomList {
+    flex: 1 0;
+    overflow-y: auto;
+    -ms-scroll-chaining: none;
+        overscroll-behavior: contain;
+}
+.RoomList > li > a {
     display: flex;
     align-items: center;
 }
-.LeftPanel div.description {
+.RoomList .description {
     margin: 0;
     flex: 1 1;
     min-width: 0;
+    display: flex;
 }
-.LeftPanel .description > * {
+.RoomList .description > .name {
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
+    flex: 1 1;
 }
 /*
 Copyright 2020 Bruno Windels <bruno@windels.cloud>
@@ -205,27 +349,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-.RoomPlaceholderView {
-    display: flex;
-    flex-direction: row;
-}
-.RoomHeader {
+.middle-header {
     align-items: center;
 }
-.RoomHeader > *:last-child {
-    margin-right: 0;
+.middle-header h2 {
+    flex: 1 1;
 }
-.RoomHeader > * {
-    margin-right: 10px;
-    flex: 0 0 auto;
-}
-.RoomHeader button {
+.middle-header button {
     display: block;
 }
-.RoomHeader .back {
-    display: none;
-}
-.RoomHeader .room-description {
+.middle-header .room-description {
     flex: 1 1;
     min-width: 0;
 }
@@ -238,7 +371,7 @@ limitations under the License.
     flex: 1 1 auto;
     min-width: 0;
 }
-.RoomHeader h2 {
+.middle-header h2 {
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
@@ -246,11 +379,21 @@ limitations under the License.
 }
 .MessageComposer {
     display: flex;
+    align-items: center;
 }
 .MessageComposer > input {
     display: block;
     flex: 1 1;
+    min-width: 0;
     box-sizing: border-box;
+}
+.TimelineLoadingView {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.TimelineLoadingView > :not(:first-child) {
+    margin-left: 12px;
 }
 /*
 Copyright 2020 Bruno Windels <bruno@windels.cloud>
@@ -269,7 +412,8 @@ limitations under the License.
 */
 .TimelinePanel ul {
     overflow-y: auto;
-    overscroll-behavior: contain;
+    -ms-scroll-chaining: none;
+        overscroll-behavior: contain;
     list-style: none;
     padding: 0;
     margin: 0;
@@ -284,25 +428,13 @@ limitations under the License.
 }
 .message-container .sender {
     margin: 5px 0;
-    font-size: 0.9em;
-    font-weight: bold;
 }
-.message-container a {
+.message-container .media {
     display: block;
-    position: relative;
-    max-width: 100%;
-    /* width and padding-top set inline to maintain aspect ratio,
-    replace with css aspect-ratio once supported */
 }
-.message-container img {
+.message-container .media > img,
+.message-container .media > video {
     display: block;
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    width: 100%;
-    height: 100%;
 }
 .TextMessageView {
     display: flex;
@@ -311,6 +443,17 @@ limitations under the License.
 .AnnouncementView {
     display: flex;
     align-items: center;
+}
+.GapView {
+    visibility: hidden;
+    display: flex;
+    padding: 10px 20px;
+}
+.GapView.isLoading {
+    visibility: visible;
+}
+.GapView > :nth-child(2) {
+    flex: 1 1;
 }
 /*
 Copyright 2020 Bruno Windels <bruno@windels.cloud>
@@ -333,10 +476,8 @@ limitations under the License.
     height: 32px;
     overflow: hidden;
     flex-shrink: 0;
-    -moz-user-select: none;
-    -webkit-user-select: none;
     -ms-user-select: none;
-    user-select: none;
+        user-select: none;
     line-height: 32px;
     font-size: calc(32px * 0.6);
     text-align: center;
@@ -379,22 +520,50 @@ limitations under the License.
         stroke-dasharray: 10 90 0 0;
     }
 }
-.spinner circle {
+.hydrogen:not(.legacy) .spinner circle {
     transform-origin: 50% 50%;
     animation-name: spinner;
     animation-duration: 2s;
     animation-iteration-count: infinite;
     animation-timing-function: linear;
-    /**
-     * TODO
-     * see if with IE11 we can just set a static stroke state and make it rotate?
-     */
     stroke-dasharray: 0 0 85 85;
-
     fill: none;
     stroke: currentcolor;
     stroke-width: 12;
     stroke-linecap: butt;
+}
+.hydrogen.legacy .spinner {
+  display: inline-block;
+  position: relative;
+}
+.hydrogen.legacy .spinner div {
+  box-sizing: border-box;
+  display: block;
+  position: absolute;
+  padding: 2px;
+  border: 2px solid currentcolor;
+  border-radius: 50%;
+  animation: legacy-spinner 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+  border-color: currentcolor transparent transparent transparent;
+  width: 20px;
+  height: 20px;
+}
+.hydrogen.legacy .spinner div:nth-child(1) {
+  animation-delay: -0.45s;
+}
+.hydrogen.legacy .spinner div:nth-child(2) {
+  animation-delay: -0.3s;
+}
+.hydrogen.legacy .spinner div:nth-child(3) {
+  animation-delay: -0.15s;
+}
+@keyframes legacy-spinner {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 .spinner {
     width: 20px;
@@ -419,7 +588,16 @@ limitations under the License.
 .form input {
   display: block;
   width: 100%;
+  min-width: 0;
   box-sizing: border-box;
+}
+.FilterField {
+    display: flex;
+}
+.FilterField input {
+    display: block;
+    flex: 1 1;
+    min-width: 0;
 }
 /*
 Copyright 2020 Bruno Windels <bruno@windels.cloud>
@@ -445,16 +623,11 @@ limitations under the License.
     word-break: break-all;
     word-break: break-word;
 }
-.SessionStatusView button {
-    border: none;
-    background: none;
-    color: currentcolor;
-    text-decoration: underline;
-}
 /* only if the body contains the whole app (e.g. we're not embedded in a page), make some changes */
 body.hydrogen {
     /* make sure to disable rubber-banding and pull to refresh in a PWA if we'd end up having a scrollbar */
-    overscroll-behavior: none;
+    -ms-scroll-chaining: none;
+        overscroll-behavior: none;
     /* disable rubberband scrolling on document in IE11 */
     overflow: hidden;
 }
@@ -466,4 +639,8 @@ body.hydrogen {
 }
 .hidden {
     display: none !important;
+}
+/* hide clear buttons in IE */
+input::-ms-clear {
+    display: none;
 }
