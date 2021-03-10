@@ -194,7 +194,7 @@ limitations under the License.
     color: white;
 }
 
-.hydrogen .avatar.usercolor1 { background-color: #368BD6; }
+.hydrogen .avatar.usercolor1 { background-color: #000000; }
 
 .hydrogen .avatar.usercolor2 { background-color: #AC3BA8; }
 
@@ -696,7 +696,7 @@ ul.Timeline > li.messageStatus .message-container > p {
     line-height: 1.7rem;
 }
 
-.hydrogen .sender.usercolor1 { color: #368BD6; }
+.hydrogen .sender.usercolor1 { color: #000000; }
 
 .hydrogen .sender.usercolor2 { color: #AC3BA8; }
 
