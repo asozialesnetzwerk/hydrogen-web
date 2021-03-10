@@ -40,8 +40,8 @@ jobs:
 
             - name: Customize login page
               run: |
-                  #chmod +x customize.sh
-                  #./customize.sh
+                  chmod +x customize.sh
+                  ./customize.sh
 
             - name: Deploy
               uses: peaceiris/actions-gh-pages@v3
