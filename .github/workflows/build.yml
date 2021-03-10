@@ -1,0 +1,50 @@
+name: Deploy to GitHub Pages
+on:
+    push:
+        branches:
+            - asozial
+
+jobs:
+    deploy:
+        name: Deployment
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v2
+
+            - name: Setup Node
+              uses: actions/setup-node@v1
+              with:
+                  node-version: '12.x'
+
+            - name: Cache dependencies
+              uses: actions/cache@v1
+              with:
+                  path: ~/.npm
+                  key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+                  restore-keys: ${{ runner.os }}-node-
+
+            - name: Download files
+              run: |
+                  curl https://raw.githubusercontent.com/asozialesnetzwerk/chat-configs/main/config.json > config.json
+                  curl https://raw.githubusercontent.com/asozialesnetzwerk/chat-configs/main/customize.sh > customize.sh
+
+            - name: Fix Footer
+              run: curl https://raw.githubusercontent.com/asozialesnetzwerk/chat-configs/main/VectorAuthFooter.js > src/components/views/auth/VectorAuthFooter.js
+              #easy way: run: sed -i 's|<a href="https://matrix.org" target="_blank" rel="noreferrer noopener">{ _t(.Powered by Matrix.) }</a>| |g' src/components/views/auth/VectorAuthFooter.js
+
+            - name: Build with yarn
+              run: |
+                  yarn install
+                  RIOT_OG_IMAGE_URL="themes/element/img/logos/element-logo.svg" yarn dist
+
+            - name: Customize login page
+              run: |
+                  chmod +x customize.sh
+                  ./customize.sh
+
+            - name: Deploy
+              uses: peaceiris/actions-gh-pages@v3
+              with:
+                  deploy_key: ${{ secrets.ACTIONS_DEPLOY_KEY }}
+                  publish_dir: webapp
