@@ -36,15 +36,15 @@ jobs:
             - name: Build with yarn
               run: |
                   yarn install
-                  RIOT_OG_IMAGE_URL="themes/element/img/logos/element-logo.svg" yarn dist
+                  yarn  build
 
             - name: Customize login page
               run: |
-                  chmod +x customize.sh
-                  ./customize.sh
+                  #chmod +x customize.sh
+                  #./customize.sh
 
             - name: Deploy
               uses: peaceiris/actions-gh-pages@v3
               with:
                   deploy_key: ${{ secrets.ACTIONS_DEPLOY_KEY }}
-                  publish_dir: webapp
+                  publish_dir: target
