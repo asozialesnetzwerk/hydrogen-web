@@ -2049,7 +2049,8 @@ class LogItem {
         if (this.error) {
             item.e = {
                 stack: this.error.stack,
-                name: this.error.name
+                name: this.error.name,
+                message: this.error.message.split("\n")[0]
             };
         }
         if (forced) {
@@ -5096,11 +5097,9 @@ function hasReadPixelPermission() {
 }
 async function loadImgFromBlob(blob) {
     const img = document.createElement("img");
-    let detach;
     const loadPromise = domEventAsPromise(img, "load");
     img.src = blob.url;
     await loadPromise;
-    detach();
     return img;
 }
 async function loadVideoFromBlob(blob) {
@@ -5292,6 +5291,9 @@ class Platform {
     }
     get devicePixelRatio() {
         return window.devicePixelRatio || 1;
+    }
+    get version() {
+        return window.HYDROGEN_VERSION;
     }
 }
 
@@ -7779,9 +7781,9 @@ class Disposables {
 }
 
 class ReaderRequest {
-    constructor(fn) {
+    constructor(fn, log) {
         this.decryptRequest = null;
-        this._promise = fn(this);
+        this._promise = fn(this, log);
     }
     complete() {
         return this._promise;
@@ -7843,14 +7845,14 @@ class TimelineReader {
         }
         return stores;
     }
-    readFrom(eventKey, direction, amount) {
-        return new ReaderRequest(async r => {
+    readFrom(eventKey, direction, amount, log) {
+        return new ReaderRequest(async (r, log) => {
             const txn = await this._storage.readTxn(this.readTxnStores);
-            return await this._readFrom(eventKey, direction, amount, r, txn);
-        });
+            return await this._readFrom(eventKey, direction, amount, r, txn, log);
+        }, log);
     }
-    readFromEnd(amount, existingTxn = null) {
-        return new ReaderRequest(async r => {
+    readFromEnd(amount, existingTxn = null, log) {
+        return new ReaderRequest(async (r, log) => {
             const txn = existingTxn || await this._storage.readTxn(this.readTxnStores);
             const liveFragment = await txn.timelineFragments.liveFragment(this._roomId);
             let entries;
@@ -7860,16 +7862,16 @@ class TimelineReader {
                 this._fragmentIdComparer.add(liveFragment);
                 const liveFragmentEntry = FragmentBoundaryEntry.end(liveFragment, this._fragmentIdComparer);
                 const eventKey = liveFragmentEntry.asEventKey();
-                entries = await this._readFrom(eventKey, Direction.Backward, amount, r, txn);
+                entries = await this._readFrom(eventKey, Direction.Backward, amount, r, txn, log);
                 entries.unshift(liveFragmentEntry);
             }
             return entries;
-        });
+        }, log);
     }
-    async _readFrom(eventKey, direction, amount, r, txn) {
+    async _readFrom(eventKey, direction, amount, r, txn, log) {
         const entries = await readRawTimelineEntriesWithTxn(this._roomId, eventKey, direction, amount, this._fragmentIdComparer, txn);
         if (this._decryptEntries) {
-            r.decryptRequest = this._decryptEntries(entries, txn);
+            r.decryptRequest = this._decryptEntries(entries, txn, log);
             try {
                 await r.decryptRequest.complete();
             } finally {
@@ -7952,11 +7954,11 @@ class Timeline {
         });
         this._allEntries = new ConcatList(this._remoteEntries, localEntries);
     }
-    async load(user) {
+    async load(user, log) {
         const txn = await this._storage.readTxn(this._timelineReader.readTxnStores.concat(this._storage.storeNames.roomMembers));
         const memberData = await txn.roomMembers.get(this._roomId, user.id);
         this._ownMember = new RoomMember(memberData);
-        const readerRequest = this._disposables.track(this._timelineReader.readFromEnd(30, txn));
+        const readerRequest = this._disposables.track(this._timelineReader.readFromEnd(30, txn, log));
         try {
             const entries = await readerRequest.complete();
             this._remoteEntries.setManySorted(entries);
@@ -8795,6 +8797,68 @@ function setPath(path, content, value) {
     obj[propKey] = value;
 }
 
+function noop () {}
+class NullLogger {
+    constructor() {
+        this.item = new NullLogItem();
+    }
+    log() {}
+    run(_, callback) {
+        return callback(this.item);
+    }
+    wrapOrRun(item, _, callback) {
+        if (item) {
+            item.wrap(null, callback);
+        } else {
+            this.run(null, callback);
+        }
+    }
+    runDetached(_, callback) {
+        new Promise(r => r(callback(this.item))).then(noop, noop);
+    }
+    async export() {
+        return null;
+    }
+    get level() {
+        return LogLevel;
+    }
+}
+class NullLogItem {
+    wrap(_, callback) {
+        return callback(this);
+    }
+    log() {}
+    set() {}
+    runDetached(_, callback) {
+        new Promise(r => r(callback(this))).then(noop, noop);
+    }
+    wrapDetached(_, callback) {
+        return this.refDetached(null, callback);
+    }
+    run(callback) {
+        return callback(this);
+    }
+    refDetached() {}
+    get level() {
+        return LogLevel;
+    }
+    get duration() {
+        return 0;
+    }
+    catch(err) {
+        return err;
+    }
+    child() {
+        return this;
+    }
+    finish() {}
+}
+const Instance = new NullLogger();
+
+function ensureLogItem(logItem) {
+    return logItem || Instance.item;
+}
+
 const EVENT_ENCRYPTED_TYPE = "m.room.encrypted";
 class Room extends EventEmitter {
     constructor({roomId, storage, hsApi, mediaRepository, emitCollectionChange, pendingEvents, user, createRoomEncryption, getSyncToken, platform}) {
@@ -8818,20 +8882,23 @@ class Room extends EventEmitter {
         this._platform = platform;
         this._observedEvents = null;
     }
-    async _getRetryDecryptEntriesForKey(roomKey, roomEncryption, txn) {
-        const retryEventIds = await roomEncryption.getEventIdsForMissingKey(roomKey, txn);
+    async _eventIdsToEntries(eventIds, txn) {
         const retryEntries = [];
-        if (retryEventIds) {
-            for (const eventId of retryEventIds) {
-                const storageEntry = await txn.timelineEvents.getByEventId(this._roomId, eventId);
-                if (storageEntry) {
-                    retryEntries.push(new EventEntry(storageEntry, this._fragmentIdComparer));
-                }
+        await Promise.all(eventIds.map(async eventId => {
+            const storageEntry = await txn.timelineEvents.getByEventId(this._roomId, eventId);
+            if (storageEntry) {
+                retryEntries.push(new EventEntry(storageEntry, this._fragmentIdComparer));
             }
-        }
+        }));
         return retryEntries;
     }
-    async notifyRoomKey(roomKey) {
+    _getAdditionalTimelineRetryEntries(otherRetryEntries, roomKeys) {
+        let retryTimelineEntries = this._roomEncryption.filterUndecryptedEventEntriesForKeys(this._timeline.remoteEntries, roomKeys);
+        const existingIds = otherRetryEntries.reduce((ids, e) => {ids.add(e.id); return ids;}, new Set());
+        retryTimelineEntries = retryTimelineEntries.filter(e => !existingIds.has(e.id));
+        return retryTimelineEntries;
+    }
+    async notifyRoomKey(roomKey, eventIds, log) {
         if (!this._roomEncryption) {
             return;
         }
@@ -8839,9 +8906,13 @@ class Room extends EventEmitter {
             this._storage.storeNames.timelineEvents,
             this._storage.storeNames.inboundGroupSessions,
         ]);
-        const retryEntries = await this._getRetryDecryptEntriesForKey(roomKey, this._roomEncryption, txn);
+        let retryEntries = await this._eventIdsToEntries(eventIds, txn);
+        if (this._timeline) {
+            const retryTimelineEntries = this._getAdditionalTimelineRetryEntries(retryEntries, [roomKey]);
+            retryEntries = retryEntries.concat(retryTimelineEntries);
+        }
         if (retryEntries.length) {
-            const decryptRequest = this._decryptEntries(DecryptionSource.Retry, retryEntries, txn);
+            const decryptRequest = this._decryptEntries(DecryptionSource.Retry, retryEntries, txn, log);
             await decryptRequest.complete();
             this._timeline?.replaceEntries(retryEntries);
             const changes = this._summary.data.applyTimelineEntries(retryEntries, false, false);
@@ -8859,8 +8930,8 @@ class Room extends EventEmitter {
             }
         }
     }
-    _decryptEntries(source, entries, inboundSessionTxn = null) {
-        const request = new DecryptionRequest(async r => {
+    _decryptEntries(source, entries, inboundSessionTxn, log = null) {
+        const request = new DecryptionRequest(async (r, log) => {
             if (!inboundSessionTxn) {
                 inboundSessionTxn = await this._storage.readTxn([this._storage.storeNames.inboundGroupSessions]);
             }
@@ -8881,7 +8952,7 @@ class Room extends EventEmitter {
             const writeTxn = await this._storage.readWriteTxn(stores);
             let decryption;
             try {
-                decryption = await changes.write(writeTxn);
+                decryption = await changes.write(writeTxn, log);
                 if (isTimelineOpen) {
                     await decryption.verifySenders(writeTxn);
                 }
@@ -8894,16 +8965,19 @@ class Room extends EventEmitter {
             if (this._observedEvents) {
                 this._observedEvents.updateEvents(entries);
             }
-        });
+        }, ensureLogItem(log));
         return request;
     }
     async _getSyncRetryDecryptEntries(newKeys, roomEncryption, txn) {
-        const entriesPerKey = await Promise.all(newKeys.map(key => this._getRetryDecryptEntriesForKey(key, roomEncryption, txn)));
-        let retryEntries = entriesPerKey.reduce((allEntries, entries) => allEntries.concat(entries), []);
+        const entriesPerKey = await Promise.all(newKeys.map(async key => {
+            const retryEventIds = await roomEncryption.getEventIdsForMissingKey(key, txn);
+            if (retryEventIds) {
+                return this._eventIdsToEntries(retryEventIds, txn);
+            }
+        }));
+        let retryEntries = entriesPerKey.reduce((allEntries, entries) => entries ? allEntries.concat(entries) : allEntries, []);
         if (this._timeline) {
-            let retryTimelineEntries = this._roomEncryption.filterUndecryptedEventEntriesForKeys(this._timeline.remoteEntries, newKeys);
-            const existingIds = retryEntries.reduce((ids, e) => {ids.add(e.id); return ids;}, new Set());
-            retryTimelineEntries = retryTimelineEntries.filter(e => !existingIds.has(e.id));
+            const retryTimelineEntries = this._getAdditionalTimelineRetryEntries(retryEntries, newKeys);
             const retryTimelineEntriesCopies = retryTimelineEntries.map(e => e.clone());
             retryEntries = retryEntries.concat(retryTimelineEntriesCopies);
         }
@@ -8962,7 +9036,7 @@ class Room extends EventEmitter {
             await log.wrap("syncWriter", log => this._syncWriter.writeSync(roomResponse, txn, log), log.level.Detail);
         let allEntries = newEntries;
         if (decryptChanges) {
-            const decryption = await decryptChanges.write(txn);
+            const decryption = await log.wrap("decryptChanges", log => decryptChanges.write(txn, log));
             log.set("decryptionResults", decryption.results.size);
             log.set("decryptionErrors", decryption.errors.size);
             if (this._isTimelineOpen) {
@@ -9180,7 +9254,7 @@ class Room extends EventEmitter {
             }
             await txn.complete();
             if (this._roomEncryption) {
-                const decryptRequest = this._decryptEntries(DecryptionSource.Timeline, gapResult.entries);
+                const decryptRequest = this._decryptEntries(DecryptionSource.Timeline, gapResult.entries, null, log);
                 await decryptRequest.complete();
             }
             for (const fragment of gapResult.fragments) {
@@ -9243,7 +9317,9 @@ class Room extends EventEmitter {
     enableSessionBackup(sessionBackup) {
         this._roomEncryption?.enableSessionBackup(sessionBackup);
         if (this._timeline) {
-            this._roomEncryption.restoreMissingSessionsFromBackup(this._timeline.remoteEntries);
+            this._platform.logger.run("enableSessionBackup", log => {
+                return this._roomEncryption.restoreMissingSessionsFromBackup(this._timeline.remoteEntries, log);
+            });
         }
     }
     get isTrackingMembers() {
@@ -9319,7 +9395,7 @@ class Room extends EventEmitter {
             if (this._roomEncryption) {
                 this._timeline.enableEncryption(this._decryptEntries.bind(this, DecryptionSource.Timeline));
             }
-            await this._timeline.load(this._user);
+            await this._timeline.load(this._user, log);
             return this._timeline;
         });
     }
@@ -9378,10 +9454,10 @@ class Room extends EventEmitter {
     }
 }
 class DecryptionRequest {
-    constructor(decryptFn) {
+    constructor(decryptFn, log) {
         this._cancelled = false;
         this.preparation = null;
-        this._promise = decryptFn(this);
+        this._promise = log.wrap("decryptEntries", log => decryptFn(this, log));
     }
     complete() {
         return this._promise;
@@ -10301,6 +10377,7 @@ class BaseRoomKey {
     constructor() {
         this._sessionInfo = null;
         this._isBetter = null;
+        this._eventIds = null;
     }
     async createSessionInfo(olm, pickleKey, txn) {
         if (this._isBetter === false) {
@@ -10337,6 +10414,9 @@ class BaseRoomKey {
                 existingSession.free();
             }
         }
+        if (existingSessionEntry?.eventIds) {
+            this._eventIds = existingSessionEntry.eventIds;
+        }
         return isBetter;
     }
     async write(olm, pickleKey, txn) {
@@ -10360,6 +10440,9 @@ class BaseRoomKey {
             return true;
         }
         return false;
+    }
+    get eventIds() {
+        return this._eventIds;
     }
     dispose() {
         if (this._sessionInfo) {
@@ -10764,8 +10847,8 @@ class SessionBackup {
         this._decryption = decryption;
         this._hsApi = hsApi;
     }
-    async getSession(roomId, sessionId) {
-        const sessionResponse = await this._hsApi.roomKeyForRoomAndSession(this._backupInfo.version, roomId, sessionId).response();
+    async getSession(roomId, sessionId, log) {
+        const sessionResponse = await this._hsApi.roomKeyForRoomAndSession(this._backupInfo.version, roomId, sessionId, {log}).response();
         const sessionInfo = this._decryption.decrypt(
             sessionResponse.session_data.ephemeral,
             sessionResponse.session_data.mac,
@@ -11002,7 +11085,7 @@ class RoomEncryption {
         }
         this._sessionBackup = sessionBackup;
     }
-    async restoreMissingSessionsFromBackup(entries) {
+    async restoreMissingSessionsFromBackup(entries, log) {
         const events = entries.filter(e => e.isEncrypted && !e.isDecrypted && e.event).map(e => e.event);
         const eventsBySession = groupEventsBySession(events);
         const groups = Array.from(eventsBySession.values());
@@ -11014,7 +11097,7 @@ class RoomEncryption {
         if (missingSessions.length) {
             for (var i = missingSessions.length - 1; i >= 0; i--) {
                 const session = missingSessions[i];
-                await this._requestMissingSessionFromBackup(session.senderKey, session.sessionId);
+                await log.wrap("session", log => this._requestMissingSessionFromBackup(session.senderKey, session.sessionId, log));
             }
         }
     }
@@ -11070,7 +11153,7 @@ class RoomEncryption {
         }
         return new DecryptionPreparation$1(preparation, errors, source, this, events);
     }
-    async _processDecryptionResults(events, results, errors, source, txn) {
+    async _processDecryptionResults(events, results, errors, source, txn, log) {
         const missingSessionEvents = events.filter(event => {
             const error = errors.get(event.event_id);
             return error?.code === "MEGOLM_NO_SESSION";
@@ -11078,33 +11161,36 @@ class RoomEncryption {
         if (!missingSessionEvents.length) {
             return;
         }
-        const eventsBySession = groupEventsBySession(events);
+        const missingEventsBySession = groupEventsBySession(missingSessionEvents);
         if (source === DecryptionSource.Sync) {
-            await Promise.all(Array.from(eventsBySession.values()).map(async group => {
+            await Promise.all(Array.from(missingEventsBySession.values()).map(async group => {
                 const eventIds = group.events.map(e => e.event_id);
                 return this._megolmDecryption.addMissingKeyEventIds(
                     this._room.id, group.senderKey, group.sessionId, eventIds, txn);
             }));
         }
-        Promise.resolve().then(async () => {
+        if (!this._sessionBackup) {
+            return;
+        }
+        log.wrapDetached("check key backup", async log => {
+            log.set("source", source);
+            log.set("events", missingSessionEvents.length);
+            log.set("sessions", missingEventsBySession.size);
             if (source === DecryptionSource.Sync) {
                 await this._clock.createTimeout(10000).elapsed();
                 if (this._disposed) {
                     return;
                 }
                 const txn = await this._storage.readTxn([this._storage.storeNames.inboundGroupSessions]);
-                await Promise.all(Array.from(eventsBySession).map(async ([key, group]) => {
+                await Promise.all(Array.from(missingEventsBySession).map(async ([key, group]) => {
                     if (await this._megolmDecryption.hasSession(this._room.id, group.senderKey, group.sessionId, txn)) {
-                        eventsBySession.delete(key);
+                        missingEventsBySession.delete(key);
                     }
                 }));
             }
-            await Promise.all(Array.from(eventsBySession.values()).map(group => {
-                return this._requestMissingSessionFromBackup(group.senderKey, group.sessionId);
+            await Promise.all(Array.from(missingEventsBySession.values()).map(group => {
+                return log.wrap("session", log => this._requestMissingSessionFromBackup(group.senderKey, group.sessionId, log));
             }));
-        }).catch(err => {
-            console.log("failed to fetch missing session from key backup");
-            console.error(err);
         });
     }
     async _verifyDecryptionResult(result, txn) {
@@ -11119,25 +11205,34 @@ class RoomEncryption {
             result.setRoomNotTrackedYet();
         }
     }
-    async _requestMissingSessionFromBackup(senderKey, sessionId) {
+    async _requestMissingSessionFromBackup(senderKey, sessionId, log) {
         if (!this._sessionBackup) {
+            log.set("enabled", false);
             this._notifyMissingMegolmSession();
             return;
         }
+        log.set("id", sessionId);
+        log.set("senderKey", senderKey);
         try {
-            const session = await this._sessionBackup.getSession(this._room.id, sessionId);
+            const session = await this._sessionBackup.getSession(this._room.id, sessionId, log);
             if (session?.algorithm === MEGOLM_ALGORITHM) {
                 if (session["sender_key"] !== senderKey) {
-                    console.warn("Got session key back from backup with different sender key, ignoring", {session, senderKey});
+                    log.set("wrong_sender_key", session["sender_key"]);
+                    log.logLevel = log.level.Warn;
                     return;
                 }
                 let roomKey = this._megolmDecryption.roomKeyFromBackup(this._room.id, sessionId, session);
                 if (roomKey) {
                     let keyIsBestOne = false;
+                    let retryEventIds;
                     try {
                         const txn = await this._storage.readWriteTxn([this._storage.storeNames.inboundGroupSessions]);
                         try {
                             keyIsBestOne = await this._megolmDecryption.writeRoomKey(roomKey, txn);
+                            log.set("isBetter", keyIsBestOne);
+                            if (keyIsBestOne) {
+                                retryEventIds = roomKey.eventIds;
+                            }
                         } catch (err) {
                             txn.abort();
                             throw err;
@@ -11147,15 +11242,18 @@ class RoomEncryption {
                         roomKey.dispose();
                     }
                     if (keyIsBestOne) {
-                        await this._room.notifyRoomKey(roomKey);
+                        await log.wrap("retryDecryption", log => this._room.notifyRoomKey(roomKey, retryEventIds || [], log));
                     }
                 }
             } else if (session?.algorithm) {
-                console.info(`Backed-up session of unknown algorithm: ${session.algorithm}`);
+                log.set("unknown algorithm", session.algorithm);
             }
         } catch (err) {
             if (!(err.name === "HomeServerError" && err.errcode === "M_NOT_FOUND")) {
-                console.error(`Could not get session ${sessionId} from backup`, err);
+                log.set("not_found", true);
+            } else {
+                log.error = err;
+                log.logLevel = log.level.Error;
             }
         }
     }
@@ -11363,10 +11461,10 @@ class DecryptionChanges$2 {
         this._roomEncryption = roomEncryption;
         this._events = events;
     }
-    async write(txn) {
+    async write(txn, log) {
         const {results, errors} = await this._megolmDecryptionChanges.write(txn);
         mergeMap(this._extraErrors, errors);
-        await this._roomEncryption._processDecryptionResults(this._events, results, errors, this._source, txn);
+        await this._roomEncryption._processDecryptionResults(this._events, results, errors, this._source, txn, log);
         return new BatchDecryptionResult(results, errors, this._roomEncryption);
     }
 }
@@ -12300,6 +12398,7 @@ class SessionContainer {
         });
     }
     async _loadSessionInfo(sessionInfo, isNewLogin, log) {
+        log.set("appVersion", this._platform.version);
         const clock = this._platform.clock;
         this._sessionStartedByReconnector = false;
         this._status.set(LoadStatus.Loading);

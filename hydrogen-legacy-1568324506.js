@@ -20127,7 +20127,8 @@ var hydrogen = (function (exports) {
 	        // (e)rror
 	        item.e = {
 	          stack: this.error.stack,
-	          name: this.error.name
+	          name: this.error.name,
+	          message: this.error.message.split("\n")[0]
 	        };
 	      }
 
@@ -27341,7 +27342,7 @@ var hydrogen = (function (exports) {
 
 	function _loadImgFromBlob() {
 	  _loadImgFromBlob = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee5(blob) {
-	    var img, detach, loadPromise;
+	    var img, loadPromise;
 	    return regeneratorRuntime.wrap(function _callee5$(_context5) {
 	      while (1) {
 	        switch (_context5.prev = _context5.next) {
@@ -27353,10 +27354,9 @@ var hydrogen = (function (exports) {
 	            return loadPromise;
 
 	          case 5:
-	            detach();
 	            return _context5.abrupt("return", img);
 
-	          case 7:
+	          case 6:
 	          case "end":
 	            return _context5.stop();
 	        }
@@ -27848,6 +27848,11 @@ var hydrogen = (function (exports) {
 	    key: "devicePixelRatio",
 	    get: function get() {
 	      return window.devicePixelRatio || 1;
+	    }
+	  }, {
+	    key: "version",
+	    get: function get() {
+	      return window.HYDROGEN_VERSION;
 	    }
 	  }]);
 
@@ -33762,11 +33767,11 @@ var hydrogen = (function (exports) {
 	}();
 
 	var ReaderRequest = /*#__PURE__*/function () {
-	  function ReaderRequest(fn) {
+	  function ReaderRequest(fn, log) {
 	    _classCallCheck(this, ReaderRequest);
 
 	    this.decryptRequest = null;
-	    this._promise = fn(this);
+	    this._promise = fn(this, log);
 	  }
 
 	  _createClass(ReaderRequest, [{
@@ -33918,11 +33923,11 @@ var hydrogen = (function (exports) {
 	    }
 	  }, {
 	    key: "readFrom",
-	    value: function readFrom(eventKey, direction, amount) {
+	    value: function readFrom(eventKey, direction, amount, log) {
 	      var _this = this;
 
 	      return new ReaderRequest( /*#__PURE__*/function () {
-	        var _ref2 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee(r) {
+	        var _ref2 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee(r, log) {
 	          var txn;
 	          return regeneratorRuntime.wrap(function _callee$(_context) {
 	            while (1) {
@@ -33934,7 +33939,7 @@ var hydrogen = (function (exports) {
 	                case 2:
 	                  txn = _context.sent;
 	                  _context.next = 5;
-	                  return _this._readFrom(eventKey, direction, amount, r, txn);
+	                  return _this._readFrom(eventKey, direction, amount, r, txn, log);
 
 	                case 5:
 	                  return _context.abrupt("return", _context.sent);
@@ -33947,10 +33952,10 @@ var hydrogen = (function (exports) {
 	          }, _callee);
 	        }));
 
-	        return function (_x7) {
+	        return function (_x7, _x8) {
 	          return _ref2.apply(this, arguments);
 	        };
-	      }());
+	      }(), log);
 	    }
 	  }, {
 	    key: "readFromEnd",
@@ -33958,8 +33963,9 @@ var hydrogen = (function (exports) {
 	      var _this2 = this;
 
 	      var existingTxn = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
+	      var log = arguments.length > 2 ? arguments[2] : undefined;
 	      return new ReaderRequest( /*#__PURE__*/function () {
-	        var _ref3 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee2(r) {
+	        var _ref3 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee2(r, log) {
 	          var txn, liveFragment, entries, liveFragmentEntry, eventKey;
 	          return regeneratorRuntime.wrap(function _callee2$(_context2) {
 	            while (1) {
@@ -34001,7 +34007,7 @@ var hydrogen = (function (exports) {
 	                  liveFragmentEntry = FragmentBoundaryEntry.end(liveFragment, _this2._fragmentIdComparer);
 	                  eventKey = liveFragmentEntry.asEventKey();
 	                  _context2.next = 18;
-	                  return _this2._readFrom(eventKey, Direction.Backward, amount, r, txn);
+	                  return _this2._readFrom(eventKey, Direction.Backward, amount, r, txn, log);
 
 	                case 18:
 	                  entries = _context2.sent;
@@ -34018,15 +34024,15 @@ var hydrogen = (function (exports) {
 	          }, _callee2);
 	        }));
 
-	        return function (_x8) {
+	        return function (_x9, _x10) {
 	          return _ref3.apply(this, arguments);
 	        };
-	      }());
+	      }(), log);
 	    }
 	  }, {
 	    key: "_readFrom",
 	    value: function () {
-	      var _readFrom2 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee3(eventKey, direction, amount, r, txn) {
+	      var _readFrom2 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee3(eventKey, direction, amount, r, txn, log) {
 	        var entries;
 	        return regeneratorRuntime.wrap(function _callee3$(_context3) {
 	          while (1) {
@@ -34043,7 +34049,7 @@ var hydrogen = (function (exports) {
 	                  break;
 	                }
 
-	                r.decryptRequest = this._decryptEntries(entries, txn);
+	                r.decryptRequest = this._decryptEntries(entries, txn, log);
 	                _context3.prev = 5;
 	                _context3.next = 8;
 	                return r.decryptRequest.complete();
@@ -34064,7 +34070,7 @@ var hydrogen = (function (exports) {
 	        }, _callee3, this, [[5,, 8, 11]]);
 	      }));
 
-	      function _readFrom(_x9, _x10, _x11, _x12, _x13) {
+	      function _readFrom(_x11, _x12, _x13, _x14, _x15, _x16) {
 	        return _readFrom2.apply(this, arguments);
 	      }
 
@@ -34233,7 +34239,7 @@ var hydrogen = (function (exports) {
 	  _createClass(Timeline, [{
 	    key: "load",
 	    value: function () {
-	      var _load = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee(user) {
+	      var _load = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee(user, log) {
 	        var txn, memberData, readerRequest, entries;
 	        return regeneratorRuntime.wrap(function _callee$(_context) {
 	          while (1) {
@@ -34254,7 +34260,7 @@ var hydrogen = (function (exports) {
 	                // if they are populated already, the sender profile would be empty
 	                // 30 seems to be a good amount to fill the entire screen
 
-	                readerRequest = this._disposables.track(this._timelineReader.readFromEnd(30, txn));
+	                readerRequest = this._disposables.track(this._timelineReader.readFromEnd(30, txn, log));
 	                _context.prev = 8;
 	                _context.next = 11;
 	                return readerRequest.complete();
@@ -34279,7 +34285,7 @@ var hydrogen = (function (exports) {
 	        }, _callee, this, [[8,, 13, 16]]);
 	      }));
 
-	      function load(_x) {
+	      function load(_x, _x2) {
 	        return _load.apply(this, arguments);
 	      }
 
@@ -34379,7 +34385,7 @@ var hydrogen = (function (exports) {
 	        }, _callee2, this, [[6,, 12, 15]]);
 	      }));
 
-	      function loadAtTop(_x2) {
+	      function loadAtTop(_x3) {
 	        return _loadAtTop.apply(this, arguments);
 	      }
 
@@ -36444,6 +36450,148 @@ var hydrogen = (function (exports) {
 	  obj[propKey] = value;
 	}
 
+	function noop$1() {}
+
+	var NullLogger = /*#__PURE__*/function () {
+	  function NullLogger() {
+	    _classCallCheck(this, NullLogger);
+
+	    this.item = new NullLogItem();
+	  }
+
+	  _createClass(NullLogger, [{
+	    key: "log",
+	    value: function log() {}
+	  }, {
+	    key: "run",
+	    value: function run(_, callback) {
+	      return callback(this.item);
+	    }
+	  }, {
+	    key: "wrapOrRun",
+	    value: function wrapOrRun(item, _, callback) {
+	      if (item) {
+	        item.wrap(null, callback);
+	      } else {
+	        this.run(null, callback);
+	      }
+	    }
+	  }, {
+	    key: "runDetached",
+	    value: function runDetached(_, callback) {
+	      var _this = this;
+
+	      new Promise(function (r) {
+	        return r(callback(_this.item));
+	      }).then(noop$1, noop$1);
+	    }
+	  }, {
+	    key: "export",
+	    value: function () {
+	      var _export2 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee() {
+	        return regeneratorRuntime.wrap(function _callee$(_context) {
+	          while (1) {
+	            switch (_context.prev = _context.next) {
+	              case 0:
+	                return _context.abrupt("return", null);
+
+	              case 1:
+	              case "end":
+	                return _context.stop();
+	            }
+	          }
+	        }, _callee);
+	      }));
+
+	      function _export() {
+	        return _export2.apply(this, arguments);
+	      }
+
+	      return _export;
+	    }()
+	  }, {
+	    key: "level",
+	    get: function get() {
+	      return LogLevel;
+	    }
+	  }]);
+
+	  return NullLogger;
+	}();
+
+	var NullLogItem = /*#__PURE__*/function () {
+	  function NullLogItem() {
+	    _classCallCheck(this, NullLogItem);
+	  }
+
+	  _createClass(NullLogItem, [{
+	    key: "wrap",
+	    value: function wrap(_, callback) {
+	      return callback(this);
+	    }
+	  }, {
+	    key: "log",
+	    value: function log() {}
+	  }, {
+	    key: "set",
+	    value: function set() {}
+	  }, {
+	    key: "runDetached",
+	    value: function runDetached(_, callback) {
+	      var _this2 = this;
+
+	      new Promise(function (r) {
+	        return r(callback(_this2));
+	      }).then(noop$1, noop$1);
+	    }
+	  }, {
+	    key: "wrapDetached",
+	    value: function wrapDetached(_, callback) {
+	      return this.refDetached(null, callback);
+	    }
+	  }, {
+	    key: "run",
+	    value: function run(callback) {
+	      return callback(this);
+	    }
+	  }, {
+	    key: "refDetached",
+	    value: function refDetached() {}
+	  }, {
+	    key: "catch",
+	    value: function _catch(err) {
+	      return err;
+	    }
+	  }, {
+	    key: "child",
+	    value: function child() {
+	      return this;
+	    }
+	  }, {
+	    key: "finish",
+	    value: function finish() {}
+	  }, {
+	    key: "level",
+	    get: function get() {
+	      return LogLevel;
+	    }
+	  }, {
+	    key: "duration",
+	    get: function get() {
+	      return 0;
+	    }
+	  }]);
+
+	  return NullLogItem;
+	}();
+
+	var Instance = new NullLogger();
+
+	// these are helper functions if you can't assume you always have a log item (e.g. some code paths call with one set, others don't)
+	function ensureLogItem(logItem) {
+	  return logItem || Instance.item;
+	}
+
 	var EVENT_ENCRYPTED_TYPE = "m.room.encrypted";
 	var Room = /*#__PURE__*/function (_EventEmitter) {
 	  _inherits(Room, _EventEmitter);
@@ -36497,160 +36645,159 @@ var hydrogen = (function (exports) {
 	  }
 
 	  _createClass(Room, [{
-	    key: "_getRetryDecryptEntriesForKey",
+	    key: "_eventIdsToEntries",
 	    value: function () {
-	      var _getRetryDecryptEntriesForKey2 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee(roomKey, roomEncryption, txn) {
-	        var retryEventIds, retryEntries, _iterator, _step, eventId, storageEntry;
+	      var _eventIdsToEntries2 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee2(eventIds, txn) {
+	        var _this2 = this;
 
-	        return regeneratorRuntime.wrap(function _callee$(_context) {
+	        var retryEntries;
+	        return regeneratorRuntime.wrap(function _callee2$(_context2) {
 	          while (1) {
-	            switch (_context.prev = _context.next) {
+	            switch (_context2.prev = _context2.next) {
 	              case 0:
-	                _context.next = 2;
-	                return roomEncryption.getEventIdsForMissingKey(roomKey, txn);
-
-	              case 2:
-	                retryEventIds = _context.sent;
 	                retryEntries = [];
+	                _context2.next = 3;
+	                return Promise.all(eventIds.map( /*#__PURE__*/function () {
+	                  var _ref2 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee(eventId) {
+	                    var storageEntry;
+	                    return regeneratorRuntime.wrap(function _callee$(_context) {
+	                      while (1) {
+	                        switch (_context.prev = _context.next) {
+	                          case 0:
+	                            _context.next = 2;
+	                            return txn.timelineEvents.getByEventId(_this2._roomId, eventId);
 
-	                if (!retryEventIds) {
-	                  _context.next = 24;
-	                  break;
-	                }
+	                          case 2:
+	                            storageEntry = _context.sent;
 
-	                _iterator = _createForOfIteratorHelper(retryEventIds);
-	                _context.prev = 6;
+	                            if (storageEntry) {
+	                              retryEntries.push(new EventEntry(storageEntry, _this2._fragmentIdComparer));
+	                            }
 
-	                _iterator.s();
+	                          case 4:
+	                          case "end":
+	                            return _context.stop();
+	                        }
+	                      }
+	                    }, _callee);
+	                  }));
 
-	              case 8:
-	                if ((_step = _iterator.n()).done) {
-	                  _context.next = 16;
-	                  break;
-	                }
+	                  return function (_x3) {
+	                    return _ref2.apply(this, arguments);
+	                  };
+	                }()));
 
-	                eventId = _step.value;
-	                _context.next = 12;
-	                return txn.timelineEvents.getByEventId(this._roomId, eventId);
+	              case 3:
+	                return _context2.abrupt("return", retryEntries);
 
-	              case 12:
-	                storageEntry = _context.sent;
-
-	                if (storageEntry) {
-	                  retryEntries.push(new EventEntry(storageEntry, this._fragmentIdComparer));
-	                }
-
-	              case 14:
-	                _context.next = 8;
-	                break;
-
-	              case 16:
-	                _context.next = 21;
-	                break;
-
-	              case 18:
-	                _context.prev = 18;
-	                _context.t0 = _context["catch"](6);
-
-	                _iterator.e(_context.t0);
-
-	              case 21:
-	                _context.prev = 21;
-
-	                _iterator.f();
-
-	                return _context.finish(21);
-
-	              case 24:
-	                return _context.abrupt("return", retryEntries);
-
-	              case 25:
+	              case 4:
 	              case "end":
-	                return _context.stop();
+	                return _context2.stop();
 	            }
 	          }
-	        }, _callee, this, [[6, 18, 21, 24]]);
+	        }, _callee2);
 	      }));
 
-	      function _getRetryDecryptEntriesForKey(_x, _x2, _x3) {
-	        return _getRetryDecryptEntriesForKey2.apply(this, arguments);
+	      function _eventIdsToEntries(_x, _x2) {
+	        return _eventIdsToEntries2.apply(this, arguments);
 	      }
 
-	      return _getRetryDecryptEntriesForKey;
+	      return _eventIdsToEntries;
 	    }()
+	  }, {
+	    key: "_getAdditionalTimelineRetryEntries",
+	    value: function _getAdditionalTimelineRetryEntries(otherRetryEntries, roomKeys) {
+	      var retryTimelineEntries = this._roomEncryption.filterUndecryptedEventEntriesForKeys(this._timeline.remoteEntries, roomKeys); // filter out any entries already in retryEntries so we don't decrypt them twice
+
+
+	      var existingIds = otherRetryEntries.reduce(function (ids, e) {
+	        ids.add(e.id);
+	        return ids;
+	      }, new Set());
+	      retryTimelineEntries = retryTimelineEntries.filter(function (e) {
+	        return !existingIds.has(e.id);
+	      });
+	      return retryTimelineEntries;
+	    }
 	    /**
-	     * Used for keys received from other sources than sync, like key backup.
+	     * Used for retrying decryption from other sources than sync, like key backup.
 	     * @internal
 	     * @param  {RoomKey} roomKey
+	     * @param  {Array<string>} eventIds any event ids that should be retried. There might be more in the timeline though for this key.
 	     * @return {Promise}
 	     */
 
 	  }, {
 	    key: "notifyRoomKey",
 	    value: function () {
-	      var _notifyRoomKey = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee2(roomKey) {
-	        var txn, retryEntries, _this$_timeline, decryptRequest, changes;
+	      var _notifyRoomKey = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee3(roomKey, eventIds, log) {
+	        var txn, retryEntries, retryTimelineEntries, _this$_timeline, decryptRequest, changes;
 
-	        return regeneratorRuntime.wrap(function _callee2$(_context2) {
+	        return regeneratorRuntime.wrap(function _callee3$(_context3) {
 	          while (1) {
-	            switch (_context2.prev = _context2.next) {
+	            switch (_context3.prev = _context3.next) {
 	              case 0:
 	                if (this._roomEncryption) {
-	                  _context2.next = 2;
+	                  _context3.next = 2;
 	                  break;
 	                }
 
-	                return _context2.abrupt("return");
+	                return _context3.abrupt("return");
 
 	              case 2:
-	                _context2.next = 4;
+	                _context3.next = 4;
 	                return this._storage.readTxn([this._storage.storeNames.timelineEvents, this._storage.storeNames.inboundGroupSessions]);
 
 	              case 4:
-	                txn = _context2.sent;
-	                _context2.next = 7;
-	                return this._getRetryDecryptEntriesForKey(roomKey, this._roomEncryption, txn);
+	                txn = _context3.sent;
+	                _context3.next = 7;
+	                return this._eventIdsToEntries(eventIds, txn);
 
 	              case 7:
-	                retryEntries = _context2.sent;
+	                retryEntries = _context3.sent;
+
+	                if (this._timeline) {
+	                  retryTimelineEntries = this._getAdditionalTimelineRetryEntries(retryEntries, [roomKey]);
+	                  retryEntries = retryEntries.concat(retryTimelineEntries);
+	                }
 
 	                if (!retryEntries.length) {
-	                  _context2.next = 18;
+	                  _context3.next = 19;
 	                  break;
 	                }
 
-	                decryptRequest = this._decryptEntries(DecryptionSource.Retry, retryEntries, txn); // this will close txn while awaiting decryption
+	                decryptRequest = this._decryptEntries(DecryptionSource.Retry, retryEntries, txn, log); // this will close txn while awaiting decryption
 
-	                _context2.next = 12;
+	                _context3.next = 13;
 	                return decryptRequest.complete();
 
-	              case 12:
+	              case 13:
 	                (_this$_timeline = this._timeline) === null || _this$_timeline === void 0 ? void 0 : _this$_timeline.replaceEntries(retryEntries); // we would ideally write the room summary in the same txn as the groupSessionDecryptions in the
 	                // _decryptEntries entries and could even know which events have been decrypted for the first
 	                // time from DecryptionChanges.write and only pass those to the summary. As timeline changes
 	                // are not essential to the room summary, it's fine to write this in a separate txn for now.
 
 	                changes = this._summary.data.applyTimelineEntries(retryEntries, false, false);
-	                _context2.next = 16;
+	                _context3.next = 17;
 	                return this._summary.writeAndApplyData(changes, this._storage);
 
-	              case 16:
-	                if (!_context2.sent) {
-	                  _context2.next = 18;
+	              case 17:
+	                if (!_context3.sent) {
+	                  _context3.next = 19;
 	                  break;
 	                }
 
 	                this._emitUpdate();
 
-	              case 18:
+	              case 19:
 	              case "end":
-	                return _context2.stop();
+	                return _context3.stop();
 	            }
 	          }
-	        }, _callee2, this);
+	        }, _callee3, this);
 	      }));
 
-	      function notifyRoomKey(_x4) {
+	      function notifyRoomKey(_x4, _x5, _x6) {
 	        return _notifyRoomKey.apply(this, arguments);
 	      }
 
@@ -36676,35 +36823,35 @@ var hydrogen = (function (exports) {
 
 	  }, {
 	    key: "_decryptEntries",
-	    value: function _decryptEntries(source, entries) {
-	      var _this2 = this;
+	    value: function _decryptEntries(source, entries, inboundSessionTxn) {
+	      var _this3 = this;
 
-	      var inboundSessionTxn = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
+	      var log = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : null;
 	      var request = new DecryptionRequest( /*#__PURE__*/function () {
-	        var _ref2 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee3(r) {
+	        var _ref3 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee4(r, log) {
 	          var events, changes, stores, isTimelineOpen, writeTxn, decryption;
-	          return regeneratorRuntime.wrap(function _callee3$(_context3) {
+	          return regeneratorRuntime.wrap(function _callee4$(_context4) {
 	            while (1) {
-	              switch (_context3.prev = _context3.next) {
+	              switch (_context4.prev = _context4.next) {
 	                case 0:
 	                  if (inboundSessionTxn) {
-	                    _context3.next = 4;
+	                    _context4.next = 4;
 	                    break;
 	                  }
 
-	                  _context3.next = 3;
-	                  return _this2._storage.readTxn([_this2._storage.storeNames.inboundGroupSessions]);
+	                  _context4.next = 3;
+	                  return _this3._storage.readTxn([_this3._storage.storeNames.inboundGroupSessions]);
 
 	                case 3:
-	                  inboundSessionTxn = _context3.sent;
+	                  inboundSessionTxn = _context4.sent;
 
 	                case 4:
 	                  if (!r.cancelled) {
-	                    _context3.next = 6;
+	                    _context4.next = 6;
 	                    break;
 	                  }
 
-	                  return _context3.abrupt("return");
+	                  return _context4.abrupt("return");
 
 	                case 6:
 	                  events = entries.filter(function (entry) {
@@ -36712,134 +36859,155 @@ var hydrogen = (function (exports) {
 	                  }).map(function (entry) {
 	                    return entry.event;
 	                  });
-	                  _context3.next = 9;
-	                  return _this2._roomEncryption.prepareDecryptAll(events, null, source, inboundSessionTxn);
+	                  _context4.next = 9;
+	                  return _this3._roomEncryption.prepareDecryptAll(events, null, source, inboundSessionTxn);
 
 	                case 9:
-	                  r.preparation = _context3.sent;
+	                  r.preparation = _context4.sent;
 
 	                  if (!r.cancelled) {
-	                    _context3.next = 12;
+	                    _context4.next = 12;
 	                    break;
 	                  }
 
-	                  return _context3.abrupt("return");
+	                  return _context4.abrupt("return");
 
 	                case 12:
-	                  _context3.next = 14;
+	                  _context4.next = 14;
 	                  return r.preparation.decrypt();
 
 	                case 14:
-	                  changes = _context3.sent;
+	                  changes = _context4.sent;
 	                  r.preparation = null;
 
 	                  if (!r.cancelled) {
-	                    _context3.next = 18;
+	                    _context4.next = 18;
 	                    break;
 	                  }
 
-	                  return _context3.abrupt("return");
+	                  return _context4.abrupt("return");
 
 	                case 18:
-	                  stores = [_this2._storage.storeNames.groupSessionDecryptions];
-	                  isTimelineOpen = _this2._isTimelineOpen;
+	                  stores = [_this3._storage.storeNames.groupSessionDecryptions];
+	                  isTimelineOpen = _this3._isTimelineOpen;
 
 	                  if (isTimelineOpen) {
 	                    // read to fetch devices if timeline is open
-	                    stores.push(_this2._storage.storeNames.deviceIdentities);
+	                    stores.push(_this3._storage.storeNames.deviceIdentities);
 	                  }
 
-	                  _context3.next = 23;
-	                  return _this2._storage.readWriteTxn(stores);
+	                  _context4.next = 23;
+	                  return _this3._storage.readWriteTxn(stores);
 
 	                case 23:
-	                  writeTxn = _context3.sent;
-	                  _context3.prev = 24;
-	                  _context3.next = 27;
-	                  return changes.write(writeTxn);
+	                  writeTxn = _context4.sent;
+	                  _context4.prev = 24;
+	                  _context4.next = 27;
+	                  return changes.write(writeTxn, log);
 
 	                case 27:
-	                  decryption = _context3.sent;
+	                  decryption = _context4.sent;
 
 	                  if (!isTimelineOpen) {
-	                    _context3.next = 31;
+	                    _context4.next = 31;
 	                    break;
 	                  }
 
-	                  _context3.next = 31;
+	                  _context4.next = 31;
 	                  return decryption.verifySenders(writeTxn);
 
 	                case 31:
-	                  _context3.next = 37;
+	                  _context4.next = 37;
 	                  break;
 
 	                case 33:
-	                  _context3.prev = 33;
-	                  _context3.t0 = _context3["catch"](24);
+	                  _context4.prev = 33;
+	                  _context4.t0 = _context4["catch"](24);
 	                  writeTxn.abort();
-	                  throw _context3.t0;
+	                  throw _context4.t0;
 
 	                case 37:
-	                  _context3.next = 39;
+	                  _context4.next = 39;
 	                  return writeTxn.complete();
 
 	                case 39:
 	                  // TODO: log decryption errors here
 	                  decryption.applyToEntries(entries);
 
-	                  if (_this2._observedEvents) {
-	                    _this2._observedEvents.updateEvents(entries);
+	                  if (_this3._observedEvents) {
+	                    _this3._observedEvents.updateEvents(entries);
 	                  }
 
 	                case 41:
 	                case "end":
-	                  return _context3.stop();
+	                  return _context4.stop();
 	              }
 	            }
-	          }, _callee3, null, [[24, 33]]);
+	          }, _callee4, null, [[24, 33]]);
 	        }));
 
-	        return function (_x5) {
-	          return _ref2.apply(this, arguments);
+	        return function (_x7, _x8) {
+	          return _ref3.apply(this, arguments);
 	        };
-	      }());
+	      }(), ensureLogItem(log));
 	      return request;
 	    }
 	  }, {
 	    key: "_getSyncRetryDecryptEntries",
 	    value: function () {
-	      var _getSyncRetryDecryptEntries2 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee4(newKeys, roomEncryption, txn) {
-	        var _this3 = this;
+	      var _getSyncRetryDecryptEntries2 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee6(newKeys, roomEncryption, txn) {
+	        var _this4 = this;
 
-	        var entriesPerKey, retryEntries, retryTimelineEntries, existingIds, retryTimelineEntriesCopies;
-	        return regeneratorRuntime.wrap(function _callee4$(_context4) {
+	        var entriesPerKey, retryEntries, retryTimelineEntries, retryTimelineEntriesCopies;
+	        return regeneratorRuntime.wrap(function _callee6$(_context6) {
 	          while (1) {
-	            switch (_context4.prev = _context4.next) {
+	            switch (_context6.prev = _context6.next) {
 	              case 0:
-	                _context4.next = 2;
-	                return Promise.all(newKeys.map(function (key) {
-	                  return _this3._getRetryDecryptEntriesForKey(key, roomEncryption, txn);
-	                }));
+	                _context6.next = 2;
+	                return Promise.all(newKeys.map( /*#__PURE__*/function () {
+	                  var _ref4 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee5(key) {
+	                    var retryEventIds;
+	                    return regeneratorRuntime.wrap(function _callee5$(_context5) {
+	                      while (1) {
+	                        switch (_context5.prev = _context5.next) {
+	                          case 0:
+	                            _context5.next = 2;
+	                            return roomEncryption.getEventIdsForMissingKey(key, txn);
+
+	                          case 2:
+	                            retryEventIds = _context5.sent;
+
+	                            if (!retryEventIds) {
+	                              _context5.next = 5;
+	                              break;
+	                            }
+
+	                            return _context5.abrupt("return", _this4._eventIdsToEntries(retryEventIds, txn));
+
+	                          case 5:
+	                          case "end":
+	                            return _context5.stop();
+	                        }
+	                      }
+	                    }, _callee5);
+	                  }));
+
+	                  return function (_x12) {
+	                    return _ref4.apply(this, arguments);
+	                  };
+	                }()));
 
 	              case 2:
-	                entriesPerKey = _context4.sent;
+	                entriesPerKey = _context6.sent;
 	                retryEntries = entriesPerKey.reduce(function (allEntries, entries) {
-	                  return allEntries.concat(entries);
+	                  return entries ? allEntries.concat(entries) : allEntries;
 	                }, []); // If we have the timeline open, see if there are more entries for the new keys
 	                // as we only store missing session information for synced events, not backfilled.
 	                // We want to decrypt all events we can though if the user is looking
 	                // at them when the timeline is open
 
 	                if (this._timeline) {
-	                  retryTimelineEntries = this._roomEncryption.filterUndecryptedEventEntriesForKeys(this._timeline.remoteEntries, newKeys); // filter out any entries already in retryEntries so we don't decrypt them twice
-
-	                  existingIds = retryEntries.reduce(function (ids, e) {
-	                    ids.add(e.id);
-	                    return ids;
-	                  }, new Set());
-	                  retryTimelineEntries = retryTimelineEntries.filter(function (e) {
-	                    return !existingIds.has(e.id);
-	                  }); // make copies so we don't modify the original entry in writeSync, before the afterSync stage
+	                  retryTimelineEntries = this._getAdditionalTimelineRetryEntries(retryEntries, newKeys); // make copies so we don't modify the original entry in writeSync, before the afterSync stage
 
 	                  retryTimelineEntriesCopies = retryTimelineEntries.map(function (e) {
 	                    return e.clone();
@@ -36848,17 +37016,17 @@ var hydrogen = (function (exports) {
 	                  retryEntries = retryEntries.concat(retryTimelineEntriesCopies);
 	                }
 
-	                return _context4.abrupt("return", retryEntries);
+	                return _context6.abrupt("return", retryEntries);
 
 	              case 6:
 	              case "end":
-	                return _context4.stop();
+	                return _context6.stop();
 	            }
 	          }
-	        }, _callee4, this);
+	        }, _callee6, this);
 	      }));
 
-	      function _getSyncRetryDecryptEntries(_x6, _x7, _x8) {
+	      function _getSyncRetryDecryptEntries(_x9, _x10, _x11) {
 	        return _getSyncRetryDecryptEntries2.apply(this, arguments);
 	      }
 
@@ -36867,12 +37035,12 @@ var hydrogen = (function (exports) {
 	  }, {
 	    key: "prepareSync",
 	    value: function () {
-	      var _prepareSync = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee5(roomResponse, membership, newKeys, txn, log) {
+	      var _prepareSync = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee7(roomResponse, membership, newKeys, txn, log) {
 	        var summaryChanges, roomEncryption, retryEntries, decryptPreparation, _roomResponse$timelin, eventsToDecrypt;
 
-	        return regeneratorRuntime.wrap(function _callee5$(_context5) {
+	        return regeneratorRuntime.wrap(function _callee7$(_context7) {
 	          while (1) {
-	            switch (_context5.prev = _context5.next) {
+	            switch (_context7.prev = _context7.next) {
 	              case 0:
 	                log.set("id", this.id);
 
@@ -36889,22 +37057,22 @@ var hydrogen = (function (exports) {
 	                }
 
 	                if (!roomEncryption) {
-	                  _context5.next = 17;
+	                  _context7.next = 17;
 	                  break;
 	                }
 
 	                eventsToDecrypt = (roomResponse === null || roomResponse === void 0 ? void 0 : (_roomResponse$timelin = roomResponse.timeline) === null || _roomResponse$timelin === void 0 ? void 0 : _roomResponse$timelin.events) || []; // when new keys arrive, also see if any older events can now be retried to decrypt
 
 	                if (!newKeys) {
-	                  _context5.next = 12;
+	                  _context7.next = 12;
 	                  break;
 	                }
 
-	                _context5.next = 10;
+	                _context7.next = 10;
 	                return this._getSyncRetryDecryptEntries(newKeys, roomEncryption, txn);
 
 	              case 10:
-	                retryEntries = _context5.sent;
+	                retryEntries = _context7.sent;
 
 	                if (retryEntries.length) {
 	                  log.set("retry", retryEntries.length);
@@ -36919,18 +37087,18 @@ var hydrogen = (function (exports) {
 	                });
 
 	                if (!eventsToDecrypt.length) {
-	                  _context5.next = 17;
+	                  _context7.next = 17;
 	                  break;
 	                }
 
-	                _context5.next = 16;
+	                _context7.next = 16;
 	                return roomEncryption.prepareDecryptAll(eventsToDecrypt, newKeys, DecryptionSource.Sync, txn);
 
 	              case 16:
-	                decryptPreparation = _context5.sent;
+	                decryptPreparation = _context7.sent;
 
 	              case 17:
-	                return _context5.abrupt("return", {
+	                return _context7.abrupt("return", {
 	                  roomEncryption: roomEncryption,
 	                  summaryChanges: summaryChanges,
 	                  decryptPreparation: decryptPreparation,
@@ -36940,13 +37108,13 @@ var hydrogen = (function (exports) {
 
 	              case 18:
 	              case "end":
-	                return _context5.stop();
+	                return _context7.stop();
 	            }
 	          }
-	        }, _callee5, this);
+	        }, _callee7, this);
 	      }));
 
-	      function prepareSync(_x9, _x10, _x11, _x12, _x13) {
+	      function prepareSync(_x13, _x14, _x15, _x16, _x17) {
 	        return _prepareSync.apply(this, arguments);
 	      }
 
@@ -36955,55 +37123,55 @@ var hydrogen = (function (exports) {
 	  }, {
 	    key: "afterPrepareSync",
 	    value: function () {
-	      var _afterPrepareSync = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee7(preparation, parentLog) {
-	        var _this4 = this;
+	      var _afterPrepareSync = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee9(preparation, parentLog) {
+	        var _this5 = this;
 
-	        return regeneratorRuntime.wrap(function _callee7$(_context7) {
+	        return regeneratorRuntime.wrap(function _callee9$(_context9) {
 	          while (1) {
-	            switch (_context7.prev = _context7.next) {
+	            switch (_context9.prev = _context9.next) {
 	              case 0:
 	                if (!preparation.decryptPreparation) {
-	                  _context7.next = 3;
+	                  _context9.next = 3;
 	                  break;
 	                }
 
-	                _context7.next = 3;
+	                _context9.next = 3;
 	                return parentLog.wrap("decrypt", /*#__PURE__*/function () {
-	                  var _ref3 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee6(log) {
-	                    return regeneratorRuntime.wrap(function _callee6$(_context6) {
+	                  var _ref5 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee8(log) {
+	                    return regeneratorRuntime.wrap(function _callee8$(_context8) {
 	                      while (1) {
-	                        switch (_context6.prev = _context6.next) {
+	                        switch (_context8.prev = _context8.next) {
 	                          case 0:
-	                            log.set("id", _this4.id);
-	                            _context6.next = 3;
+	                            log.set("id", _this5.id);
+	                            _context8.next = 3;
 	                            return preparation.decryptPreparation.decrypt();
 
 	                          case 3:
-	                            preparation.decryptChanges = _context6.sent;
+	                            preparation.decryptChanges = _context8.sent;
 	                            preparation.decryptPreparation = null;
 
 	                          case 5:
 	                          case "end":
-	                            return _context6.stop();
+	                            return _context8.stop();
 	                        }
 	                      }
-	                    }, _callee6);
+	                    }, _callee8);
 	                  }));
 
-	                  return function (_x16) {
-	                    return _ref3.apply(this, arguments);
+	                  return function (_x20) {
+	                    return _ref5.apply(this, arguments);
 	                  };
 	                }(), parentLog.level.Detail);
 
 	              case 3:
 	              case "end":
-	                return _context7.stop();
+	                return _context9.stop();
 	            }
 	          }
-	        }, _callee7);
+	        }, _callee9);
 	      }));
 
-	      function afterPrepareSync(_x14, _x15) {
+	      function afterPrepareSync(_x18, _x19) {
 	        return _afterPrepareSync.apply(this, arguments);
 	      }
 
@@ -37014,50 +37182,52 @@ var hydrogen = (function (exports) {
 	  }, {
 	    key: "writeSync",
 	    value: function () {
-	      var _writeSync = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee8(roomResponse, isInitialSync, _ref4, txn, log) {
-	        var _this5 = this,
+	      var _writeSync = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee10(roomResponse, isInitialSync, _ref6, txn, log) {
+	        var _this6 = this,
 	            _summaryChanges,
 	            _roomResponse$timelin2;
 
 	        var summaryChanges, decryptChanges, roomEncryption, retryEntries, _yield$log$wrap, newEntries, newLiveKey, memberChanges, allEntries, decryption, shouldFlushKeyShares, heroChanges, removedPendingEvents;
 
-	        return regeneratorRuntime.wrap(function _callee8$(_context8) {
+	        return regeneratorRuntime.wrap(function _callee10$(_context10) {
 	          while (1) {
-	            switch (_context8.prev = _context8.next) {
+	            switch (_context10.prev = _context10.next) {
 	              case 0:
-	                summaryChanges = _ref4.summaryChanges, decryptChanges = _ref4.decryptChanges, roomEncryption = _ref4.roomEncryption, retryEntries = _ref4.retryEntries;
+	                summaryChanges = _ref6.summaryChanges, decryptChanges = _ref6.decryptChanges, roomEncryption = _ref6.roomEncryption, retryEntries = _ref6.retryEntries;
 	                log.set("id", this.id);
-	                _context8.next = 4;
+	                _context10.next = 4;
 	                return log.wrap("syncWriter", function (log) {
-	                  return _this5._syncWriter.writeSync(roomResponse, txn, log);
+	                  return _this6._syncWriter.writeSync(roomResponse, txn, log);
 	                }, log.level.Detail);
 
 	              case 4:
-	                _yield$log$wrap = _context8.sent;
+	                _yield$log$wrap = _context10.sent;
 	                newEntries = _yield$log$wrap.entries;
 	                newLiveKey = _yield$log$wrap.newLiveKey;
 	                memberChanges = _yield$log$wrap.memberChanges;
 	                allEntries = newEntries;
 
 	                if (!decryptChanges) {
-	                  _context8.next = 20;
+	                  _context10.next = 20;
 	                  break;
 	                }
 
-	                _context8.next = 12;
-	                return decryptChanges.write(txn);
+	                _context10.next = 12;
+	                return log.wrap("decryptChanges", function (log) {
+	                  return decryptChanges.write(txn, log);
+	                });
 
 	              case 12:
-	                decryption = _context8.sent;
+	                decryption = _context10.sent;
 	                log.set("decryptionResults", decryption.results.size);
 	                log.set("decryptionErrors", decryption.errors.size);
 
 	                if (!this._isTimelineOpen) {
-	                  _context8.next = 18;
+	                  _context10.next = 18;
 	                  break;
 	                }
 
-	                _context8.next = 18;
+	                _context10.next = 18;
 	                return decryption.verifySenders(txn);
 
 	              case 18:
@@ -37073,15 +37243,15 @@ var hydrogen = (function (exports) {
 	                shouldFlushKeyShares = false; // pass member changes to device tracker
 
 	                if (!(roomEncryption && this.isTrackingMembers && (memberChanges === null || memberChanges === void 0 ? void 0 : memberChanges.size))) {
-	                  _context8.next = 27;
+	                  _context10.next = 27;
 	                  break;
 	                }
 
-	                _context8.next = 25;
+	                _context10.next = 25;
 	                return roomEncryption.writeMemberChanges(memberChanges, txn, log);
 
 	              case 25:
-	                shouldFlushKeyShares = _context8.sent;
+	                shouldFlushKeyShares = _context10.sent;
 	                log.set("shouldFlushKeyShares", shouldFlushKeyShares);
 
 	              case 27:
@@ -37097,7 +37267,7 @@ var hydrogen = (function (exports) {
 
 
 	                if (!((_summaryChanges = summaryChanges) === null || _summaryChanges === void 0 ? void 0 : _summaryChanges.needsHeroes)) {
-	                  _context8.next = 35;
+	                  _context10.next = 35;
 	                  break;
 	                }
 
@@ -37106,18 +37276,18 @@ var hydrogen = (function (exports) {
 	                  this._heroes = new Heroes(this._roomId);
 	                }
 
-	                _context8.next = 34;
+	                _context10.next = 34;
 	                return this._heroes.calculateChanges(summaryChanges.heroes, memberChanges, txn);
 
 	              case 34:
-	                heroChanges = _context8.sent;
+	                heroChanges = _context10.sent;
 
 	              case 35:
 	                if (Array.isArray((_roomResponse$timelin2 = roomResponse.timeline) === null || _roomResponse$timelin2 === void 0 ? void 0 : _roomResponse$timelin2.events)) {
 	                  removedPendingEvents = this._sendQueue.removeRemoteEchos(roomResponse.timeline.events, txn, log);
 	                }
 
-	                return _context8.abrupt("return", {
+	                return _context10.abrupt("return", {
 	                  summaryChanges: summaryChanges,
 	                  roomEncryption: roomEncryption,
 	                  newEntries: newEntries,
@@ -37131,13 +37301,13 @@ var hydrogen = (function (exports) {
 
 	              case 37:
 	              case "end":
-	                return _context8.stop();
+	                return _context10.stop();
 	            }
 	          }
-	        }, _callee8, this);
+	        }, _callee10, this);
 	      }));
 
-	      function writeSync(_x17, _x18, _x19, _x20, _x21) {
+	      function writeSync(_x21, _x22, _x23, _x24, _x25) {
 	        return _writeSync.apply(this, arguments);
 	      }
 
@@ -37168,21 +37338,21 @@ var hydrogen = (function (exports) {
 
 	      if (memberChanges.size) {
 	        if (this._changedMembersDuringSync) {
-	          var _iterator2 = _createForOfIteratorHelper(memberChanges.entries()),
-	              _step2;
+	          var _iterator = _createForOfIteratorHelper(memberChanges.entries()),
+	              _step;
 
 	          try {
-	            for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
-	              var _step2$value = _slicedToArray(_step2.value, 2),
-	                  userId = _step2$value[0],
-	                  memberChange = _step2$value[1];
+	            for (_iterator.s(); !(_step = _iterator.n()).done;) {
+	              var _step$value = _slicedToArray(_step.value, 2),
+	                  userId = _step$value[0],
+	                  memberChange = _step$value[1];
 
 	              this._changedMembersDuringSync.set(userId, memberChange.member);
 	            }
 	          } catch (err) {
-	            _iterator2.e(err);
+	            _iterator.e(err);
 	          } finally {
-	            _iterator2.f();
+	            _iterator.f();
 	          }
 	        }
 
@@ -37191,14 +37361,14 @@ var hydrogen = (function (exports) {
 	        }
 
 	        if (this._timeline) {
-	          var _iterator3 = _createForOfIteratorHelper(memberChanges.entries()),
-	              _step3;
+	          var _iterator2 = _createForOfIteratorHelper(memberChanges.entries()),
+	              _step2;
 
 	          try {
-	            for (_iterator3.s(); !(_step3 = _iterator3.n()).done;) {
-	              var _step3$value = _slicedToArray(_step3.value, 2),
-	                  _userId = _step3$value[0],
-	                  _memberChange = _step3$value[1];
+	            for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
+	              var _step2$value = _slicedToArray(_step2.value, 2),
+	                  _userId = _step2$value[0],
+	                  _memberChange = _step2$value[1];
 
 	              if (_userId === this._user.id) {
 	                this._timeline.updateOwnMember(_memberChange.member);
@@ -37207,9 +37377,9 @@ var hydrogen = (function (exports) {
 	              }
 	            }
 	          } catch (err) {
-	            _iterator3.e(err);
+	            _iterator2.e(err);
 	          } finally {
-	            _iterator3.f();
+	            _iterator2.f();
 	          }
 	        }
 	      }
@@ -37259,8 +37429,8 @@ var hydrogen = (function (exports) {
 	    }
 	  }, {
 	    key: "needsAfterSyncCompleted",
-	    value: function needsAfterSyncCompleted(_ref5) {
-	      var shouldFlushKeyShares = _ref5.shouldFlushKeyShares;
+	    value: function needsAfterSyncCompleted(_ref7) {
+	      var shouldFlushKeyShares = _ref7.shouldFlushKeyShares;
 	      return shouldFlushKeyShares;
 	    }
 	    /**
@@ -37272,30 +37442,30 @@ var hydrogen = (function (exports) {
 	  }, {
 	    key: "afterSyncCompleted",
 	    value: function () {
-	      var _afterSyncCompleted = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee9(changes, log) {
-	        return regeneratorRuntime.wrap(function _callee9$(_context9) {
+	      var _afterSyncCompleted = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee11(changes, log) {
+	        return regeneratorRuntime.wrap(function _callee11$(_context11) {
 	          while (1) {
-	            switch (_context9.prev = _context9.next) {
+	            switch (_context11.prev = _context11.next) {
 	              case 0:
 	                log.set("id", this.id);
 
 	                if (!this._roomEncryption) {
-	                  _context9.next = 4;
+	                  _context11.next = 4;
 	                  break;
 	                }
 
-	                _context9.next = 4;
+	                _context11.next = 4;
 	                return this._roomEncryption.flushPendingRoomKeyShares(this._hsApi, null, log);
 
 	              case 4:
 	              case "end":
-	                return _context9.stop();
+	                return _context11.stop();
 	            }
 	          }
-	        }, _callee9, this);
+	        }, _callee11, this);
 	      }));
 
-	      function afterSyncCompleted(_x22, _x23) {
+	      function afterSyncCompleted(_x26, _x27) {
 	        return _afterSyncCompleted.apply(this, arguments);
 	      }
 
@@ -37306,7 +37476,7 @@ var hydrogen = (function (exports) {
 	  }, {
 	    key: "start",
 	    value: function start(pendingOperations, parentLog) {
-	      var _this6 = this;
+	      var _this7 = this;
 
 	      if (this._roomEncryption) {
 	        var roomKeyShares = pendingOperations === null || pendingOperations === void 0 ? void 0 : pendingOperations.get("share_room_key");
@@ -37314,8 +37484,8 @@ var hydrogen = (function (exports) {
 	        if (roomKeyShares) {
 	          // if we got interrupted last time sending keys to newly joined members
 	          parentLog.wrapDetached("flush room keys", function (log) {
-	            log.set("id", _this6.id);
-	            return _this6._roomEncryption.flushPendingRoomKeyShares(_this6._hsApi, roomKeyShares, log);
+	            log.set("id", _this7.id);
+	            return _this7._roomEncryption.flushPendingRoomKeyShares(_this7._hsApi, roomKeyShares, log);
 	          });
 	        }
 	      }
@@ -37327,14 +37497,14 @@ var hydrogen = (function (exports) {
 	  }, {
 	    key: "load",
 	    value: function () {
-	      var _load = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee10(summary, txn, log) {
+	      var _load = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee12(summary, txn, log) {
 	        var roomEncryption, changes;
-	        return regeneratorRuntime.wrap(function _callee10$(_context10) {
+	        return regeneratorRuntime.wrap(function _callee12$(_context12) {
 	          while (1) {
-	            switch (_context10.prev = _context10.next) {
+	            switch (_context12.prev = _context12.next) {
 	              case 0:
 	                log.set("id", this.id);
-	                _context10.prev = 1;
+	                _context12.prev = 1;
 
 	                this._summary.load(summary);
 
@@ -37346,36 +37516,36 @@ var hydrogen = (function (exports) {
 
 
 	                if (!this._summary.data.needsHeroes) {
-	                  _context10.next = 10;
+	                  _context12.next = 10;
 	                  break;
 	                }
 
 	                this._heroes = new Heroes(this._roomId);
-	                _context10.next = 8;
+	                _context12.next = 8;
 	                return this._heroes.calculateChanges(this._summary.data.heroes, [], txn);
 
 	              case 8:
-	                changes = _context10.sent;
+	                changes = _context12.sent;
 
 	                this._heroes.applyChanges(changes, this._summary.data);
 
 	              case 10:
-	                return _context10.abrupt("return", this._syncWriter.load(txn, log));
+	                return _context12.abrupt("return", this._syncWriter.load(txn, log));
 
 	              case 13:
-	                _context10.prev = 13;
-	                _context10.t0 = _context10["catch"](1);
-	                throw new WrappedError("Could not load room ".concat(this._roomId), _context10.t0);
+	                _context12.prev = 13;
+	                _context12.t0 = _context12["catch"](1);
+	                throw new WrappedError("Could not load room ".concat(this._roomId), _context12.t0);
 
 	              case 16:
 	              case "end":
-	                return _context10.stop();
+	                return _context12.stop();
 	            }
 	          }
-	        }, _callee10, this, [[1, 13]]);
+	        }, _callee12, this, [[1, 13]]);
 	      }));
 
-	      function load(_x24, _x25, _x26) {
+	      function load(_x28, _x29, _x30) {
 	        return _load.apply(this, arguments);
 	      }
 
@@ -37386,13 +37556,13 @@ var hydrogen = (function (exports) {
 	  }, {
 	    key: "sendEvent",
 	    value: function sendEvent(eventType, content, attachments) {
-	      var _this7 = this;
+	      var _this8 = this;
 
 	      var log = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : null;
 
 	      this._platform.logger.wrapOrRun(log, "send", function (log) {
-	        log.set("id", _this7.id);
-	        return _this7._sendQueue.enqueueEvent(eventType, content, attachments, log);
+	        log.set("id", _this8.id);
+	        return _this8._sendQueue.enqueueEvent(eventType, content, attachments, log);
 	      });
 	    }
 	    /** @public */
@@ -37400,36 +37570,36 @@ var hydrogen = (function (exports) {
 	  }, {
 	    key: "ensureMessageKeyIsShared",
 	    value: function () {
-	      var _ensureMessageKeyIsShared = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee11() {
-	        var _this8 = this;
+	      var _ensureMessageKeyIsShared = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee13() {
+	        var _this9 = this;
 
 	        var log,
-	            _args11 = arguments;
-	        return regeneratorRuntime.wrap(function _callee11$(_context11) {
+	            _args13 = arguments;
+	        return regeneratorRuntime.wrap(function _callee13$(_context13) {
 	          while (1) {
-	            switch (_context11.prev = _context11.next) {
+	            switch (_context13.prev = _context13.next) {
 	              case 0:
-	                log = _args11.length > 0 && _args11[0] !== undefined ? _args11[0] : null;
+	                log = _args13.length > 0 && _args13[0] !== undefined ? _args13[0] : null;
 
 	                if (this._roomEncryption) {
-	                  _context11.next = 3;
+	                  _context13.next = 3;
 	                  break;
 	                }
 
-	                return _context11.abrupt("return");
+	                return _context13.abrupt("return");
 
 	              case 3:
-	                return _context11.abrupt("return", this._platform.logger.wrapOrRun(log, "ensureMessageKeyIsShared", function (log) {
-	                  log.set("id", _this8.id);
-	                  return _this8._roomEncryption.ensureMessageKeyIsShared(_this8._hsApi, log);
+	                return _context13.abrupt("return", this._platform.logger.wrapOrRun(log, "ensureMessageKeyIsShared", function (log) {
+	                  log.set("id", _this9.id);
+	                  return _this9._roomEncryption.ensureMessageKeyIsShared(_this9._hsApi, log);
 	                }));
 
 	              case 4:
 	              case "end":
-	                return _context11.stop();
+	                return _context13.stop();
 	            }
 	          }
-	        }, _callee11, this);
+	        }, _callee13, this);
 	      }));
 
 	      function ensureMessageKeyIsShared() {
@@ -37443,30 +37613,30 @@ var hydrogen = (function (exports) {
 	  }, {
 	    key: "loadMemberList",
 	    value: function () {
-	      var _loadMemberList = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee12() {
-	        var _this9 = this;
+	      var _loadMemberList = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee14() {
+	        var _this10 = this;
 
 	        var log,
 	            members,
-	            _args12 = arguments;
-	        return regeneratorRuntime.wrap(function _callee12$(_context12) {
+	            _args14 = arguments;
+	        return regeneratorRuntime.wrap(function _callee14$(_context14) {
 	          while (1) {
-	            switch (_context12.prev = _context12.next) {
+	            switch (_context14.prev = _context14.next) {
 	              case 0:
-	                log = _args12.length > 0 && _args12[0] !== undefined ? _args12[0] : null;
+	                log = _args14.length > 0 && _args14[0] !== undefined ? _args14[0] : null;
 
 	                if (!this._memberList) {
-	                  _context12.next = 6;
+	                  _context14.next = 6;
 	                  break;
 	                }
 
 	                // TODO: also await fetchOrLoadMembers promise here
 	                this._memberList.retain();
 
-	                return _context12.abrupt("return", this._memberList);
+	                return _context14.abrupt("return", this._memberList);
 
 	              case 6:
-	                _context12.next = 8;
+	                _context14.next = 8;
 	                return fetchOrLoadMembers({
 	                  summary: this._summary,
 	                  roomId: this._roomId,
@@ -37475,27 +37645,27 @@ var hydrogen = (function (exports) {
 	                  syncToken: this._getSyncToken(),
 	                  // to handle race between /members and /sync
 	                  setChangedMembersMap: function setChangedMembersMap(map) {
-	                    return _this9._changedMembersDuringSync = map;
+	                    return _this10._changedMembersDuringSync = map;
 	                  },
 	                  log: log
 	                }, this._platform.logger);
 
 	              case 8:
-	                members = _context12.sent;
+	                members = _context14.sent;
 	                this._memberList = new MemberList({
 	                  members: members,
 	                  closeCallback: function closeCallback() {
-	                    _this9._memberList = null;
+	                    _this10._memberList = null;
 	                  }
 	                });
-	                return _context12.abrupt("return", this._memberList);
+	                return _context14.abrupt("return", this._memberList);
 
 	              case 11:
 	              case "end":
-	                return _context12.stop();
+	                return _context14.stop();
 	            }
 	          }
-	        }, _callee12, this);
+	        }, _callee14, this);
 	      }));
 
 	      function loadMemberList() {
@@ -37509,33 +37679,33 @@ var hydrogen = (function (exports) {
 	  }, {
 	    key: "fillGap",
 	    value: function fillGap(fragmentEntry, amount) {
-	      var _this10 = this;
+	      var _this11 = this;
 
 	      var log = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
 	      // TODO move some/all of this out of Room
 	      return this._platform.logger.wrapOrRun(log, "fillGap", /*#__PURE__*/function () {
-	        var _ref6 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee13(log) {
-	          var response, txn, removedPendingEvents, gapResult, gapWriter, decryptRequest, _iterator4, _step4, fragment;
+	        var _ref8 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee15(log) {
+	          var response, txn, removedPendingEvents, gapResult, gapWriter, decryptRequest, _iterator3, _step3, fragment;
 
-	          return regeneratorRuntime.wrap(function _callee13$(_context13) {
+	          return regeneratorRuntime.wrap(function _callee15$(_context15) {
 	            while (1) {
-	              switch (_context13.prev = _context13.next) {
+	              switch (_context15.prev = _context15.next) {
 	                case 0:
-	                  log.set("id", _this10.id);
+	                  log.set("id", _this11.id);
 	                  log.set("fragment", fragmentEntry.fragmentId);
 	                  log.set("dir", fragmentEntry.direction.asApiString());
 
 	                  if (!fragmentEntry.edgeReached) {
-	                    _context13.next = 6;
+	                    _context15.next = 6;
 	                    break;
 	                  }
 
 	                  log.set("edgeReached", true);
-	                  return _context13.abrupt("return");
+	                  return _context15.abrupt("return");
 
 	                case 6:
-	                  _context13.next = 8;
-	                  return _this10._hsApi.messages(_this10._roomId, {
+	                  _context15.next = 8;
+	                  return _this11._hsApi.messages(_this11._roomId, {
 	                    from: fragmentEntry.token,
 	                    dir: fragmentEntry.direction.asApiString(),
 	                    limit: amount,
@@ -37548,83 +37718,83 @@ var hydrogen = (function (exports) {
 	                  }).response();
 
 	                case 8:
-	                  response = _context13.sent;
-	                  _context13.next = 11;
-	                  return _this10._storage.readWriteTxn([_this10._storage.storeNames.pendingEvents, _this10._storage.storeNames.timelineEvents, _this10._storage.storeNames.timelineFragments]);
+	                  response = _context15.sent;
+	                  _context15.next = 11;
+	                  return _this11._storage.readWriteTxn([_this11._storage.storeNames.pendingEvents, _this11._storage.storeNames.timelineEvents, _this11._storage.storeNames.timelineFragments]);
 
 	                case 11:
-	                  txn = _context13.sent;
-	                  _context13.prev = 12;
+	                  txn = _context15.sent;
+	                  _context15.prev = 12;
 	                  // detect remote echos of pending messages in the gap
-	                  removedPendingEvents = _this10._sendQueue.removeRemoteEchos(response.chunk, txn, log); // write new events into gap
+	                  removedPendingEvents = _this11._sendQueue.removeRemoteEchos(response.chunk, txn, log); // write new events into gap
 
 	                  gapWriter = new GapWriter({
-	                    roomId: _this10._roomId,
-	                    storage: _this10._storage,
-	                    fragmentIdComparer: _this10._fragmentIdComparer
+	                    roomId: _this11._roomId,
+	                    storage: _this11._storage,
+	                    fragmentIdComparer: _this11._fragmentIdComparer
 	                  });
-	                  _context13.next = 17;
+	                  _context15.next = 17;
 	                  return gapWriter.writeFragmentFill(fragmentEntry, response, txn, log);
 
 	                case 17:
-	                  gapResult = _context13.sent;
-	                  _context13.next = 24;
+	                  gapResult = _context15.sent;
+	                  _context15.next = 24;
 	                  break;
 
 	                case 20:
-	                  _context13.prev = 20;
-	                  _context13.t0 = _context13["catch"](12);
+	                  _context15.prev = 20;
+	                  _context15.t0 = _context15["catch"](12);
 	                  txn.abort();
-	                  throw _context13.t0;
+	                  throw _context15.t0;
 
 	                case 24:
-	                  _context13.next = 26;
+	                  _context15.next = 26;
 	                  return txn.complete();
 
 	                case 26:
-	                  if (!_this10._roomEncryption) {
-	                    _context13.next = 30;
+	                  if (!_this11._roomEncryption) {
+	                    _context15.next = 30;
 	                    break;
 	                  }
 
-	                  decryptRequest = _this10._decryptEntries(DecryptionSource.Timeline, gapResult.entries);
-	                  _context13.next = 30;
+	                  decryptRequest = _this11._decryptEntries(DecryptionSource.Timeline, gapResult.entries, null, log);
+	                  _context15.next = 30;
 	                  return decryptRequest.complete();
 
 	                case 30:
 	                  // once txn is committed, update in-memory state & emit events
-	                  _iterator4 = _createForOfIteratorHelper(gapResult.fragments);
+	                  _iterator3 = _createForOfIteratorHelper(gapResult.fragments);
 
 	                  try {
-	                    for (_iterator4.s(); !(_step4 = _iterator4.n()).done;) {
-	                      fragment = _step4.value;
+	                    for (_iterator3.s(); !(_step3 = _iterator3.n()).done;) {
+	                      fragment = _step3.value;
 
-	                      _this10._fragmentIdComparer.add(fragment);
+	                      _this11._fragmentIdComparer.add(fragment);
 	                    }
 	                  } catch (err) {
-	                    _iterator4.e(err);
+	                    _iterator3.e(err);
 	                  } finally {
-	                    _iterator4.f();
+	                    _iterator3.f();
 	                  }
 
 	                  if (removedPendingEvents) {
-	                    _this10._sendQueue.emitRemovals(removedPendingEvents);
+	                    _this11._sendQueue.emitRemovals(removedPendingEvents);
 	                  }
 
-	                  if (_this10._timeline) {
-	                    _this10._timeline.addOrReplaceEntries(gapResult.entries);
+	                  if (_this11._timeline) {
+	                    _this11._timeline.addOrReplaceEntries(gapResult.entries);
 	                  }
 
 	                case 34:
 	                case "end":
-	                  return _context13.stop();
+	                  return _context15.stop();
 	              }
 	            }
-	          }, _callee13, null, [[12, 20]]);
+	          }, _callee15, null, [[12, 20]]);
 	        }));
 
-	        return function (_x27) {
-	          return _ref6.apply(this, arguments);
+	        return function (_x31) {
+	          return _ref8.apply(this, arguments);
 	        };
 	      }());
 	    }
@@ -37633,49 +37803,52 @@ var hydrogen = (function (exports) {
 	  }, {
 	    key: "enableSessionBackup",
 	    value: function enableSessionBackup(sessionBackup) {
-	      var _this$_roomEncryption;
+	      var _this$_roomEncryption,
+	          _this12 = this;
 
 	      (_this$_roomEncryption = this._roomEncryption) === null || _this$_roomEncryption === void 0 ? void 0 : _this$_roomEncryption.enableSessionBackup(sessionBackup); // TODO: do we really want to do this every time you open the app?
 
 	      if (this._timeline) {
-	        this._roomEncryption.restoreMissingSessionsFromBackup(this._timeline.remoteEntries);
+	        this._platform.logger.run("enableSessionBackup", function (log) {
+	          return _this12._roomEncryption.restoreMissingSessionsFromBackup(_this12._timeline.remoteEntries, log);
+	        });
 	      }
 	    }
 	  }, {
 	    key: "_getLastEventId",
 	    value: function () {
-	      var _getLastEventId2 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee14() {
+	      var _getLastEventId2 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee16() {
 	        var lastKey, _eventEntry$event, txn, eventEntry;
 
-	        return regeneratorRuntime.wrap(function _callee14$(_context14) {
+	        return regeneratorRuntime.wrap(function _callee16$(_context16) {
 	          while (1) {
-	            switch (_context14.prev = _context14.next) {
+	            switch (_context16.prev = _context16.next) {
 	              case 0:
 	                lastKey = this._syncWriter.lastMessageKey;
 
 	                if (!lastKey) {
-	                  _context14.next = 9;
+	                  _context16.next = 9;
 	                  break;
 	                }
 
-	                _context14.next = 4;
+	                _context16.next = 4;
 	                return this._storage.readTxn([this._storage.storeNames.timelineEvents]);
 
 	              case 4:
-	                txn = _context14.sent;
-	                _context14.next = 7;
+	                txn = _context16.sent;
+	                _context16.next = 7;
 	                return txn.timelineEvents.get(this._roomId, lastKey);
 
 	              case 7:
-	                eventEntry = _context14.sent;
-	                return _context14.abrupt("return", eventEntry === null || eventEntry === void 0 ? void 0 : (_eventEntry$event = eventEntry.event) === null || _eventEntry$event === void 0 ? void 0 : _eventEntry$event.event_id);
+	                eventEntry = _context16.sent;
+	                return _context16.abrupt("return", eventEntry === null || eventEntry === void 0 ? void 0 : (_eventEntry$event = eventEntry.event) === null || _eventEntry$event === void 0 ? void 0 : _eventEntry$event.event_id);
 
 	              case 9:
 	              case "end":
-	                return _context14.stop();
+	                return _context16.stop();
 	            }
 	          }
-	        }, _callee14, this);
+	        }, _callee16, this);
 	      }));
 
 	      function _getLastEventId() {
@@ -37695,108 +37868,108 @@ var hydrogen = (function (exports) {
 	  }, {
 	    key: "clearUnread",
 	    value: function () {
-	      var _clearUnread = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee16() {
-	        var _this11 = this;
+	      var _clearUnread = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee18() {
+	        var _this13 = this;
 
 	        var log,
-	            _args16 = arguments;
-	        return regeneratorRuntime.wrap(function _callee16$(_context16) {
+	            _args18 = arguments;
+	        return regeneratorRuntime.wrap(function _callee18$(_context18) {
 	          while (1) {
-	            switch (_context16.prev = _context16.next) {
+	            switch (_context18.prev = _context18.next) {
 	              case 0:
-	                log = _args16.length > 0 && _args16[0] !== undefined ? _args16[0] : null;
+	                log = _args18.length > 0 && _args18[0] !== undefined ? _args18[0] : null;
 
 	                if (!(this.isUnread || this.notificationCount)) {
-	                  _context16.next = 5;
+	                  _context18.next = 5;
 	                  break;
 	                }
 
-	                _context16.next = 4;
+	                _context18.next = 4;
 	                return this._platform.logger.wrapOrRun(log, "clearUnread", /*#__PURE__*/function () {
-	                  var _ref7 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee15(log) {
+	                  var _ref9 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee17(log) {
 	                    var txn, data, lastEventId;
-	                    return regeneratorRuntime.wrap(function _callee15$(_context15) {
+	                    return regeneratorRuntime.wrap(function _callee17$(_context17) {
 	                      while (1) {
-	                        switch (_context15.prev = _context15.next) {
+	                        switch (_context17.prev = _context17.next) {
 	                          case 0:
-	                            log.set("id", _this11.id);
-	                            _context15.next = 3;
-	                            return _this11._storage.readWriteTxn([_this11._storage.storeNames.roomSummary]);
+	                            log.set("id", _this13.id);
+	                            _context17.next = 3;
+	                            return _this13._storage.readWriteTxn([_this13._storage.storeNames.roomSummary]);
 
 	                          case 3:
-	                            txn = _context15.sent;
-	                            _context15.prev = 4;
-	                            data = _this11._summary.writeClearUnread(txn);
-	                            _context15.next = 12;
+	                            txn = _context17.sent;
+	                            _context17.prev = 4;
+	                            data = _this13._summary.writeClearUnread(txn);
+	                            _context17.next = 12;
 	                            break;
 
 	                          case 8:
-	                            _context15.prev = 8;
-	                            _context15.t0 = _context15["catch"](4);
+	                            _context17.prev = 8;
+	                            _context17.t0 = _context17["catch"](4);
 	                            txn.abort();
-	                            throw _context15.t0;
+	                            throw _context17.t0;
 
 	                          case 12:
-	                            _context15.next = 14;
+	                            _context17.next = 14;
 	                            return txn.complete();
 
 	                          case 14:
-	                            _this11._summary.applyChanges(data);
+	                            _this13._summary.applyChanges(data);
 
-	                            _this11._emitUpdate();
+	                            _this13._emitUpdate();
 
-	                            _context15.prev = 16;
-	                            _context15.next = 19;
-	                            return _this11._getLastEventId();
+	                            _context17.prev = 16;
+	                            _context17.next = 19;
+	                            return _this13._getLastEventId();
 
 	                          case 19:
-	                            lastEventId = _context15.sent;
+	                            lastEventId = _context17.sent;
 
 	                            if (!lastEventId) {
-	                              _context15.next = 23;
+	                              _context17.next = 23;
 	                              break;
 	                            }
 
-	                            _context15.next = 23;
-	                            return _this11._hsApi.receipt(_this11._roomId, "m.read", lastEventId);
+	                            _context17.next = 23;
+	                            return _this13._hsApi.receipt(_this13._roomId, "m.read", lastEventId);
 
 	                          case 23:
-	                            _context15.next = 29;
+	                            _context17.next = 29;
 	                            break;
 
 	                          case 25:
-	                            _context15.prev = 25;
-	                            _context15.t1 = _context15["catch"](16);
+	                            _context17.prev = 25;
+	                            _context17.t1 = _context17["catch"](16);
 
-	                            if (!(_context15.t1.name !== "ConnectionError")) {
-	                              _context15.next = 29;
+	                            if (!(_context17.t1.name !== "ConnectionError")) {
+	                              _context17.next = 29;
 	                              break;
 	                            }
 
-	                            throw _context15.t1;
+	                            throw _context17.t1;
 
 	                          case 29:
 	                          case "end":
-	                            return _context15.stop();
+	                            return _context17.stop();
 	                        }
 	                      }
-	                    }, _callee15, null, [[4, 8], [16, 25]]);
+	                    }, _callee17, null, [[4, 8], [16, 25]]);
 	                  }));
 
-	                  return function (_x28) {
-	                    return _ref7.apply(this, arguments);
+	                  return function (_x32) {
+	                    return _ref9.apply(this, arguments);
 	                  };
 	                }());
 
 	              case 4:
-	                return _context16.abrupt("return", _context16.sent);
+	                return _context18.abrupt("return", _context18.sent);
 
 	              case 5:
 	              case "end":
-	                return _context16.stop();
+	                return _context18.stop();
 	            }
 	          }
-	        }, _callee16, this);
+	        }, _callee18, this);
 	      }));
 
 	      function clearUnread() {
@@ -37810,61 +37983,61 @@ var hydrogen = (function (exports) {
 	  }, {
 	    key: "openTimeline",
 	    value: function openTimeline() {
-	      var _this12 = this;
+	      var _this14 = this;
 
 	      var log = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
 	      return this._platform.logger.wrapOrRun(log, "open timeline", /*#__PURE__*/function () {
-	        var _ref8 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee17(log) {
-	          return regeneratorRuntime.wrap(function _callee17$(_context17) {
+	        var _ref10 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee19(log) {
+	          return regeneratorRuntime.wrap(function _callee19$(_context19) {
 	            while (1) {
-	              switch (_context17.prev = _context17.next) {
+	              switch (_context19.prev = _context19.next) {
 	                case 0:
-	                  log.set("id", _this12.id);
+	                  log.set("id", _this14.id);
 
-	                  if (!_this12._timeline) {
-	                    _context17.next = 3;
+	                  if (!_this14._timeline) {
+	                    _context19.next = 3;
 	                    break;
 	                  }
 
 	                  throw new Error("not dealing with load race here for now");
 
 	                case 3:
-	                  _this12._timeline = new Timeline({
-	                    roomId: _this12.id,
-	                    storage: _this12._storage,
-	                    fragmentIdComparer: _this12._fragmentIdComparer,
-	                    pendingEvents: _this12._sendQueue.pendingEvents,
+	                  _this14._timeline = new Timeline({
+	                    roomId: _this14.id,
+	                    storage: _this14._storage,
+	                    fragmentIdComparer: _this14._fragmentIdComparer,
+	                    pendingEvents: _this14._sendQueue.pendingEvents,
 	                    closeCallback: function closeCallback() {
-	                      _this12._timeline = null;
+	                      _this14._timeline = null;
 
-	                      if (_this12._roomEncryption) {
-	                        _this12._roomEncryption.notifyTimelineClosed();
+	                      if (_this14._roomEncryption) {
+	                        _this14._roomEncryption.notifyTimelineClosed();
 	                      }
 	                    },
-	                    clock: _this12._platform.clock,
-	                    logger: _this12._platform.logger
+	                    clock: _this14._platform.clock,
+	                    logger: _this14._platform.logger
 	                  });
 
-	                  if (_this12._roomEncryption) {
-	                    _this12._timeline.enableEncryption(_this12._decryptEntries.bind(_this12, DecryptionSource.Timeline));
+	                  if (_this14._roomEncryption) {
+	                    _this14._timeline.enableEncryption(_this14._decryptEntries.bind(_this14, DecryptionSource.Timeline));
 	                  }
 
-	                  _context17.next = 7;
-	                  return _this12._timeline.load(_this12._user);
+	                  _context19.next = 7;
+	                  return _this14._timeline.load(_this14._user, log);
 
 	                case 7:
-	                  return _context17.abrupt("return", _this12._timeline);
+	                  return _context19.abrupt("return", _this14._timeline);
 
 	                case 8:
 	                case "end":
-	                  return _context17.stop();
+	                  return _context19.stop();
 	              }
 	            }
-	          }, _callee17);
+	          }, _callee19);
 	        }));
 
-	        return function (_x29) {
-	          return _ref8.apply(this, arguments);
+	        return function (_x33) {
+	          return _ref10.apply(this, arguments);
 	        };
 	      }());
 	    }
@@ -37885,11 +38058,11 @@ var hydrogen = (function (exports) {
 	  }, {
 	    key: "observeEvent",
 	    value: function observeEvent(eventId) {
-	      var _this13 = this;
+	      var _this15 = this;
 
 	      if (!this._observedEvents) {
 	        this._observedEvents = new ObservedEventMap(function () {
-	          _this13._observedEvents = null;
+	          _this15._observedEvents = null;
 	        });
 	      }
 
@@ -37915,11 +38088,11 @@ var hydrogen = (function (exports) {
 	  }, {
 	    key: "_readEventById",
 	    value: function () {
-	      var _readEventById2 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee18(eventId) {
+	      var _readEventById2 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee20(eventId) {
 	        var stores, txn, storageEntry, entry, request;
-	        return regeneratorRuntime.wrap(function _callee18$(_context18) {
+	        return regeneratorRuntime.wrap(function _callee20$(_context20) {
 	          while (1) {
-	            switch (_context18.prev = _context18.next) {
+	            switch (_context20.prev = _context20.next) {
 	              case 0:
 	                stores = [this._storage.storeNames.timelineEvents];
 
@@ -37927,45 +38100,45 @@ var hydrogen = (function (exports) {
 	                  stores.push(this._storage.storeNames.inboundGroupSessions);
 	                }
 
-	                _context18.next = 4;
+	                _context20.next = 4;
 	                return this._storage.readTxn(stores);
 
 	              case 4:
-	                txn = _context18.sent;
-	                _context18.next = 7;
+	                txn = _context20.sent;
+	                _context20.next = 7;
 	                return txn.timelineEvents.getByEventId(this._roomId, eventId);
 
 	              case 7:
-	                storageEntry = _context18.sent;
+	                storageEntry = _context20.sent;
 
 	                if (!storageEntry) {
-	                  _context18.next = 15;
+	                  _context20.next = 15;
 	                  break;
 	                }
 
 	                entry = new EventEntry(storageEntry, this._fragmentIdComparer);
 
 	                if (!(entry.eventType === EVENT_ENCRYPTED_TYPE)) {
-	                  _context18.next = 14;
+	                  _context20.next = 14;
 	                  break;
 	                }
 
 	                request = this._decryptEntries(DecryptionSource.Timeline, [entry], txn);
-	                _context18.next = 14;
+	                _context20.next = 14;
 	                return request.complete();
 
 	              case 14:
-	                return _context18.abrupt("return", entry);
+	                return _context20.abrupt("return", entry);
 
 	              case 15:
 	              case "end":
-	                return _context18.stop();
+	                return _context20.stop();
 	            }
 	          }
-	        }, _callee18, this);
+	        }, _callee20, this);
 	      }));
 
-	      function _readEventById(_x30) {
+	      function _readEventById(_x34) {
 	        return _readEventById2.apply(this, arguments);
 	      }
 
@@ -38084,12 +38257,16 @@ var hydrogen = (function (exports) {
 	}(EventEmitter);
 
 	var DecryptionRequest = /*#__PURE__*/function () {
-	  function DecryptionRequest(decryptFn) {
+	  function DecryptionRequest(decryptFn, log) {
+	    var _this16 = this;
+
 	    _classCallCheck(this, DecryptionRequest);
 
 	    this._cancelled = false;
 	    this.preparation = null;
-	    this._promise = decryptFn(this);
+	    this._promise = log.wrap("decryptEntries", function (log) {
+	      return decryptFn(_this16, log);
+	    });
 	  }
 
 	  _createClass(DecryptionRequest, [{
@@ -40573,6 +40750,7 @@ var hydrogen = (function (exports) {
 
 	    this._sessionInfo = null;
 	    this._isBetter = null;
+	    this._eventIds = null;
 	  }
 
 	  _createClass(BaseRoomKey, [{
@@ -40672,11 +40850,17 @@ var hydrogen = (function (exports) {
 	                  } finally {
 	                    existingSession.free();
 	                  }
+	                } // store the event ids that can be decrypted with this key
+	                // before we overwrite them if called from `write`.
+
+
+	                if (existingSessionEntry === null || existingSessionEntry === void 0 ? void 0 : existingSessionEntry.eventIds) {
+	                  this._eventIds = existingSessionEntry.eventIds;
 	                }
 
 	                return _context2.abrupt("return", isBetter);
 
-	              case 6:
+	              case 7:
 	              case "end":
 	                return _context2.stop();
 	            }
@@ -40758,6 +40942,11 @@ var hydrogen = (function (exports) {
 
 	        this._sessionInfo = null;
 	      }
+	    }
+	  }, {
+	    key: "eventIds",
+	    get: function get() {
+	      return this._eventIds;
 	    }
 	  }]);
 
@@ -41947,14 +42136,16 @@ var hydrogen = (function (exports) {
 	  _createClass(SessionBackup, [{
 	    key: "getSession",
 	    value: function () {
-	      var _getSession = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee(roomId, sessionId) {
+	      var _getSession = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee(roomId, sessionId, log) {
 	        var sessionResponse, sessionInfo;
 	        return regeneratorRuntime.wrap(function _callee$(_context) {
 	          while (1) {
 	            switch (_context.prev = _context.next) {
 	              case 0:
 	                _context.next = 2;
-	                return this._hsApi.roomKeyForRoomAndSession(this._backupInfo.version, roomId, sessionId).response();
+	                return this._hsApi.roomKeyForRoomAndSession(this._backupInfo.version, roomId, sessionId, {
+	                  log: log
+	                }).response();
 
 	              case 2:
 	                sessionResponse = _context.sent;
@@ -41969,7 +42160,7 @@ var hydrogen = (function (exports) {
 	        }, _callee, this);
 	      }));
 
-	      function getSession(_x, _x2) {
+	      function getSession(_x, _x2, _x3) {
 	        return _getSession.apply(this, arguments);
 	      }
 
@@ -42049,7 +42240,7 @@ var hydrogen = (function (exports) {
 	        }, _callee2, null, [[11, 17]]);
 	      }));
 
-	      function fromSecretStorage(_x3) {
+	      function fromSecretStorage(_x4) {
 	        return _fromSecretStorage.apply(this, arguments);
 	      }
 
@@ -42464,13 +42655,14 @@ var hydrogen = (function (exports) {
 	  }, {
 	    key: "restoreMissingSessionsFromBackup",
 	    value: function () {
-	      var _restoreMissingSessionsFromBackup = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee2(entries) {
+	      var _restoreMissingSessionsFromBackup = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee2(entries, log) {
 	        var _this = this;
 
-	        var events, eventsBySession, groups, txn, hasSessions, missingSessions, i, session;
-	        return regeneratorRuntime.wrap(function _callee2$(_context2) {
+	        var events, eventsBySession, groups, txn, hasSessions, missingSessions, _loop, i;
+
+	        return regeneratorRuntime.wrap(function _callee2$(_context3) {
 	          while (1) {
-	            switch (_context2.prev = _context2.next) {
+	            switch (_context3.prev = _context3.next) {
 	              case 0:
 	                events = entries.filter(function (e) {
 	                  return e.isEncrypted && !e.isDecrypted && e.event;
@@ -42479,12 +42671,12 @@ var hydrogen = (function (exports) {
 	                });
 	                eventsBySession = groupEventsBySession(events);
 	                groups = Array.from(eventsBySession.values());
-	                _context2.next = 5;
+	                _context3.next = 5;
 	                return this._storage.readTxn([this._storage.storeNames.inboundGroupSessions]);
 
 	              case 5:
-	                txn = _context2.sent;
-	                _context2.next = 8;
+	                txn = _context3.sent;
+	                _context3.next = 8;
 	                return Promise.all(groups.map( /*#__PURE__*/function () {
 	                  var _ref2 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee(group) {
 	                    return regeneratorRuntime.wrap(function _callee$(_context) {
@@ -42501,48 +42693,65 @@ var hydrogen = (function (exports) {
 	                    }, _callee);
 	                  }));
 
-	                  return function (_x2) {
+	                  return function (_x3) {
 	                    return _ref2.apply(this, arguments);
 	                  };
 	                }()));
 
 	              case 8:
-	                hasSessions = _context2.sent;
+	                hasSessions = _context3.sent;
 	                missingSessions = groups.filter(function (_, i) {
 	                  return !hasSessions[i];
 	                });
 
 	                if (!missingSessions.length) {
-	                  _context2.next = 19;
+	                  _context3.next = 18;
 	                  break;
 	                }
 
+	                _loop = /*#__PURE__*/regeneratorRuntime.mark(function _loop() {
+	                  var session;
+	                  return regeneratorRuntime.wrap(function _loop$(_context2) {
+	                    while (1) {
+	                      switch (_context2.prev = _context2.next) {
+	                        case 0:
+	                          session = missingSessions[i];
+	                          _context2.next = 3;
+	                          return log.wrap("session", function (log) {
+	                            return _this._requestMissingSessionFromBackup(session.senderKey, session.sessionId, log);
+	                          });
+
+	                        case 3:
+	                        case "end":
+	                          return _context2.stop();
+	                      }
+	                    }
+	                  }, _loop);
+	                });
 	                i = missingSessions.length - 1;
 
-	              case 12:
+	              case 13:
 	                if (!(i >= 0)) {
-	                  _context2.next = 19;
+	                  _context3.next = 18;
 	                  break;
 	                }
 
-	                session = missingSessions[i];
-	                _context2.next = 16;
-	                return this._requestMissingSessionFromBackup(session.senderKey, session.sessionId);
+	                return _context3.delegateYield(_loop(), "t0", 15);
 
-	              case 16:
+	              case 15:
 	                i--;
-	                _context2.next = 12;
+	                _context3.next = 13;
 	                break;
 
-	              case 19:
+	              case 18:
 	              case "end":
-	                return _context2.stop();
+	                return _context3.stop();
 	            }
 	          }
 	        }, _callee2, this);
 	      }));
 
-	      function restoreMissingSessionsFromBackup(_x) {
+	      function restoreMissingSessionsFromBackup(_x, _x2) {
 	        return _restoreMissingSessionsFromBackup.apply(this, arguments);
 	      }
 
@@ -42562,9 +42771,9 @@ var hydrogen = (function (exports) {
 	    value: function () {
 	      var _writeMemberChanges = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee3(memberChanges, txn, log) {
 	        var shouldFlush, memberChangesArray;
-	        return regeneratorRuntime.wrap(function _callee3$(_context3) {
+	        return regeneratorRuntime.wrap(function _callee3$(_context4) {
 	          while (1) {
-	            switch (_context3.prev = _context3.next) {
+	            switch (_context4.prev = _context4.next) {
 	              case 0:
 	                memberChangesArray = Array.from(memberChanges.values());
 
@@ -42586,71 +42795,68 @@ var hydrogen = (function (exports) {
 	                if (!memberChangesArray.some(function (m) {
 	                  return m.hasJoined;
 	                })) {
-	                  _context3.next = 6;
+	                  _context4.next = 6;
 	                  break;
 	                }
 
-	                _context3.next = 5;
+	                _context4.next = 5;
 	                return this._addShareRoomKeyOperationForNewMembers(memberChangesArray, txn, log);
 
 	              case 5:
-	                shouldFlush = _context3.sent;
+	                shouldFlush = _context4.sent;
 
 	              case 6:
-	                _context3.next = 8;
+	                _context4.next = 8;
 	                return this._deviceTracker.writeMemberChanges(this._room, memberChanges, txn);
 
 	              case 8:
-	                return _context3.abrupt("return", shouldFlush);
+	                return _context4.abrupt("return", shouldFlush);
 
 	              case 9:
 	              case "end":
-	                return _context3.stop();
+	                return _context4.stop();
 	            }
 	          }
 	        }, _callee3, this);
 	      }));
 
-	      function writeMemberChanges(_x3, _x4, _x5) {
+	      function writeMemberChanges(_x4, _x5, _x6) {
 	        return _writeMemberChanges.apply(this, arguments);
 	      }
 
 	      return writeMemberChanges;
-	    }() // this happens before entries exists, as they are created by the syncwriter
-	    // but we want to be able to map it back to something in the timeline easily
-	    // when retrying decryption.
-
+	    }()
 	  }, {
 	    key: "prepareDecryptAll",
 	    value: function () {
 	      var _prepareDecryptAll = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee4(events, newKeys, source, txn) {
 	        var errors, validEvents, _iterator, _step, _event$unsigned, _event$content, event, _event$content2, customCache, sessionCache, preparation;
 
-	        return regeneratorRuntime.wrap(function _callee4$(_context4) {
+	        return regeneratorRuntime.wrap(function _callee4$(_context5) {
 	          while (1) {
-	            switch (_context4.prev = _context4.next) {
+	            switch (_context5.prev = _context5.next) {
 	              case 0:
 	                errors = new Map();
 	                validEvents = [];
 	                _iterator = _createForOfIteratorHelper(events);
-	                _context4.prev = 3;
+	                _context5.prev = 3;
 
 	                _iterator.s();
 
 	              case 5:
 	                if ((_step = _iterator.n()).done) {
-	                  _context4.next = 13;
+	                  _context5.next = 13;
 	                  break;
 	                }
 
 	                event = _step.value;
 
 	                if (!(event.redacted_because || ((_event$unsigned = event.unsigned) === null || _event$unsigned === void 0 ? void 0 : _event$unsigned.redacted_because))) {
-	                  _context4.next = 9;
+	                  _context5.next = 9;
 	                  break;
 	                }
 
-	                return _context4.abrupt("continue", 11);
+	                return _context5.abrupt("continue", 11);
 
 	              case 9:
 	                if (((_event$content = event.content) === null || _event$content === void 0 ? void 0 : _event$content.algorithm) !== MEGOLM_ALGORITHM) {
@@ -42660,49 +42866,49 @@ var hydrogen = (function (exports) {
 	                validEvents.push(event);
 
 	              case 11:
-	                _context4.next = 5;
+	                _context5.next = 5;
 	                break;
 
 	              case 13:
-	                _context4.next = 18;
+	                _context5.next = 18;
 	                break;
 
 	              case 15:
-	                _context4.prev = 15;
-	                _context4.t0 = _context4["catch"](3);
+	                _context5.prev = 15;
+	                _context5.t0 = _context5["catch"](3);
 
-	                _iterator.e(_context4.t0);
+	                _iterator.e(_context5.t0);
 
 	              case 18:
-	                _context4.prev = 18;
+	                _context5.prev = 18;
 
 	                _iterator.f();
 
-	                return _context4.finish(18);
+	                return _context5.finish(18);
 
 	              case 21:
 	                if (!(source === DecryptionSource.Sync)) {
-	                  _context4.next = 25;
+	                  _context5.next = 25;
 	                  break;
 	                }
 
 	                sessionCache = this._megolmSyncCache;
-	                _context4.next = 35;
+	                _context5.next = 35;
 	                break;
 
 	              case 25:
 	                if (!(source === DecryptionSource.Timeline)) {
-	                  _context4.next = 29;
+	                  _context5.next = 29;
 	                  break;
 	                }
 
 	                sessionCache = this._megolmBackfillCache;
-	                _context4.next = 35;
+	                _context5.next = 35;
 	                break;
 
 	              case 29:
 	                if (!(source === DecryptionSource.Retry)) {
-	                  _context4.next = 34;
+	                  _context5.next = 34;
 	                  break;
 	                }
 
@@ -42710,34 +42916,34 @@ var hydrogen = (function (exports) {
 	                // and somewhere else, so create a custom cache we use just for this operation.
 	                customCache = this._megolmDecryption.createSessionCache();
 	                sessionCache = customCache;
-	                _context4.next = 35;
+	                _context5.next = 35;
 	                break;
 
 	              case 34:
 	                throw new Error("Unknown source: " + source);
 
 	              case 35:
-	                _context4.next = 37;
+	                _context5.next = 37;
 	                return this._megolmDecryption.prepareDecryptAll(this._room.id, validEvents, newKeys, sessionCache, txn);
 
 	              case 37:
-	                preparation = _context4.sent;
+	                preparation = _context5.sent;
 
 	                if (customCache) {
 	                  customCache.dispose();
 	                }
 
-	                return _context4.abrupt("return", new DecryptionPreparation$1(preparation, errors, source, this, events));
+	                return _context5.abrupt("return", new DecryptionPreparation$1(preparation, errors, source, this, events));
 
 	              case 40:
 	              case "end":
-	                return _context4.stop();
+	                return _context5.stop();
 	            }
 	          }
 	        }, _callee4, this, [[3, 15, 18, 21]]);
 	      }));
 
-	      function prepareDecryptAll(_x6, _x7, _x8, _x9) {
+	      function prepareDecryptAll(_x7, _x8, _x9, _x10) {
 	        return _prepareDecryptAll.apply(this, arguments);
 	      }
 
@@ -42746,13 +42952,13 @@ var hydrogen = (function (exports) {
 	  }, {
 	    key: "_processDecryptionResults",
 	    value: function () {
-	      var _processDecryptionResults2 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee8(events, results, errors, source, txn) {
+	      var _processDecryptionResults2 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee8(events, results, errors, source, txn, log) {
 	        var _this2 = this;
 
-	        var missingSessionEvents, eventsBySession;
-	        return regeneratorRuntime.wrap(function _callee8$(_context8) {
+	        var missingSessionEvents, missingEventsBySession;
+	        return regeneratorRuntime.wrap(function _callee8$(_context9) {
 	          while (1) {
-	            switch (_context8.prev = _context8.next) {
+	            switch (_context9.prev = _context9.next) {
 	              case 0:
 	                missingSessionEvents = events.filter(function (event) {
 	                  var error = errors.get(event.event_id);
@@ -42760,138 +42966,156 @@ var hydrogen = (function (exports) {
 	                });
 
 	                if (missingSessionEvents.length) {
-	                  _context8.next = 3;
+	                  _context9.next = 3;
 	                  break;
 	                }
 
-	                return _context8.abrupt("return");
+	                return _context9.abrupt("return");
 
 	              case 3:
-	                eventsBySession = groupEventsBySession(events);
+	                // store missing event ids if received from sync
+	                missingEventsBySession = groupEventsBySession(missingSessionEvents);
 
 	                if (!(source === DecryptionSource.Sync)) {
-	                  _context8.next = 7;
+	                  _context9.next = 7;
 	                  break;
 	                }
 
-	                _context8.next = 7;
-	                return Promise.all(Array.from(eventsBySession.values()).map( /*#__PURE__*/function () {
+	                _context9.next = 7;
+	                return Promise.all(Array.from(missingEventsBySession.values()).map( /*#__PURE__*/function () {
 	                  var _ref3 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee5(group) {
 	                    var eventIds;
-	                    return regeneratorRuntime.wrap(function _callee5$(_context5) {
+	                    return regeneratorRuntime.wrap(function _callee5$(_context6) {
 	                      while (1) {
-	                        switch (_context5.prev = _context5.next) {
+	                        switch (_context6.prev = _context6.next) {
 	                          case 0:
 	                            eventIds = group.events.map(function (e) {
 	                              return e.event_id;
 	                            });
-	                            return _context5.abrupt("return", _this2._megolmDecryption.addMissingKeyEventIds(_this2._room.id, group.senderKey, group.sessionId, eventIds, txn));
+	                            return _context6.abrupt("return", _this2._megolmDecryption.addMissingKeyEventIds(_this2._room.id, group.senderKey, group.sessionId, eventIds, txn));
 
 	                          case 2:
 	                          case "end":
-	                            return _context5.stop();
+	                            return _context6.stop();
 	                        }
 	                      }
 	                    }, _callee5);
 	                  }));
 
-	                  return function (_x15) {
+	                  return function (_x17) {
 	                    return _ref3.apply(this, arguments);
 	                  };
 	                }()));
 
 	              case 7:
-	                // TODO: do proper logging here
-	                // run detached
-	                Promise.resolve().then( /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee7() {
-	                  var _txn;
+	                if (this._sessionBackup) {
+	                  _context9.next = 9;
+	                  break;
+	                }
 
-	                  return regeneratorRuntime.wrap(function _callee7$(_context7) {
-	                    while (1) {
-	                      switch (_context7.prev = _context7.next) {
-	                        case 0:
-	                          if (!(source === DecryptionSource.Sync)) {
-	                            _context7.next = 10;
-	                            break;
-	                          }
+	                return _context9.abrupt("return");
 
-	                          _context7.next = 3;
-	                          return _this2._clock.createTimeout(10000).elapsed();
+	              case 9:
+	                log.wrapDetached("check key backup", /*#__PURE__*/function () {
+	                  var _ref4 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee7(log) {
+	                    var _txn;
 
-	                        case 3:
-	                          if (!_this2._disposed) {
-	                            _context7.next = 5;
-	                            break;
-	                          }
+	                    return regeneratorRuntime.wrap(function _callee7$(_context8) {
+	                      while (1) {
+	                        switch (_context8.prev = _context8.next) {
+	                          case 0:
+	                            // if the message came from sync, wait 10s to see if the room key arrives late,
+	                            // and only after that proceed to request from backup
+	                            log.set("source", source);
+	                            log.set("events", missingSessionEvents.length);
+	                            log.set("sessions", missingEventsBySession.size);
 
-	                          return _context7.abrupt("return");
+	                            if (!(source === DecryptionSource.Sync)) {
+	                              _context8.next = 13;
+	                              break;
+	                            }
 
-	                        case 5:
-	                          _context7.next = 7;
-	                          return _this2._storage.readTxn([_this2._storage.storeNames.inboundGroupSessions]);
+	                            _context8.next = 6;
+	                            return _this2._clock.createTimeout(10000).elapsed();
 
-	                        case 7:
-	                          _txn = _context7.sent;
-	                          _context7.next = 10;
-	                          return Promise.all(Array.from(eventsBySession).map( /*#__PURE__*/function () {
-	                            var _ref6 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee6(_ref5) {
-	                              var _ref7, key, group;
+	                          case 6:
+	                            if (!_this2._disposed) {
+	                              _context8.next = 8;
+	                              break;
+	                            }
 
-	                              return regeneratorRuntime.wrap(function _callee6$(_context6) {
-	                                while (1) {
-	                                  switch (_context6.prev = _context6.next) {
-	                                    case 0:
-	                                      _ref7 = _slicedToArray(_ref5, 2), key = _ref7[0], group = _ref7[1];
-	                                      _context6.next = 3;
-	                                      return _this2._megolmDecryption.hasSession(_this2._room.id, group.senderKey, group.sessionId, _txn);
+	                            return _context8.abrupt("return");
 
-	                                    case 3:
-	                                      if (!_context6.sent) {
-	                                        _context6.next = 5;
-	                                        break;
-	                                      }
+	                          case 8:
+	                            _context8.next = 10;
+	                            return _this2._storage.readTxn([_this2._storage.storeNames.inboundGroupSessions]);
 
-	                                      eventsBySession.delete(key);
+	                          case 10:
+	                            _txn = _context8.sent;
+	                            _context8.next = 13;
+	                            return Promise.all(Array.from(missingEventsBySession).map( /*#__PURE__*/function () {
+	                              var _ref6 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee6(_ref5) {
+	                                var _ref7, key, group;
 
-	                                    case 5:
-	                                    case "end":
-	                                      return _context6.stop();
+	                                return regeneratorRuntime.wrap(function _callee6$(_context7) {
+	                                  while (1) {
+	                                    switch (_context7.prev = _context7.next) {
+	                                      case 0:
+	                                        _ref7 = _slicedToArray(_ref5, 2), key = _ref7[0], group = _ref7[1];
+	                                        _context7.next = 3;
+	                                        return _this2._megolmDecryption.hasSession(_this2._room.id, group.senderKey, group.sessionId, _txn);
+
+	                                      case 3:
+	                                        if (!_context7.sent) {
+	                                          _context7.next = 5;
+	                                          break;
+	                                        }
+
+	                                        missingEventsBySession.delete(key);
+
+	                                      case 5:
+	                                      case "end":
+	                                        return _context7.stop();
+	                                    }
 	                                  }
-	                                }
-	                              }, _callee6);
+	                                }, _callee6);
+	                              }));
+
+	                              return function (_x19) {
+	                                return _ref6.apply(this, arguments);
+	                              };
+	                            }()));
+
+	                          case 13:
+	                            _context8.next = 15;
+	                            return Promise.all(Array.from(missingEventsBySession.values()).map(function (group) {
+	                              return log.wrap("session", function (log) {
+	                                return _this2._requestMissingSessionFromBackup(group.senderKey, group.sessionId, log);
+	                              });
 	                            }));
 
-	                            return function (_x16) {
-	                              return _ref6.apply(this, arguments);
-	                            };
-	                          }()));
-
-	                        case 10:
-	                          _context7.next = 12;
-	                          return Promise.all(Array.from(eventsBySession.values()).map(function (group) {
-	                            return _this2._requestMissingSessionFromBackup(group.senderKey, group.sessionId);
-	                          }));
-
-	                        case 12:
-	                        case "end":
-	                          return _context7.stop();
+	                          case 15:
+	                          case "end":
+	                            return _context8.stop();
+	                        }
 	                      }
-	                    }
-	                  }, _callee7);
-	                }))).catch(function (err) {
-	                  console.log("failed to fetch missing session from key backup");
-	                  console.error(err);
-	                });
+	                    }, _callee7);
+	                  }));
 
-	              case 8:
+	                  return function (_x18) {
+	                    return _ref4.apply(this, arguments);
+	                  };
+	                }());
+
+	              case 10:
 	              case "end":
-	                return _context8.stop();
+	                return _context9.stop();
 	            }
 	          }
-	        }, _callee8);
+	        }, _callee8, this);
 	      }));
 
-	      function _processDecryptionResults(_x10, _x11, _x12, _x13, _x14) {
+	      function _processDecryptionResults(_x11, _x12, _x13, _x14, _x15, _x16) {
 	        return _processDecryptionResults2.apply(this, arguments);
 	      }
 
@@ -42902,22 +43126,22 @@ var hydrogen = (function (exports) {
 	    value: function () {
 	      var _verifyDecryptionResult2 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee9(result, txn) {
 	        var device;
-	        return regeneratorRuntime.wrap(function _callee9$(_context9) {
+	        return regeneratorRuntime.wrap(function _callee9$(_context10) {
 	          while (1) {
-	            switch (_context9.prev = _context9.next) {
+	            switch (_context10.prev = _context10.next) {
 	              case 0:
 	                device = this._senderDeviceCache.get(result.senderCurve25519Key);
 
 	                if (device) {
-	                  _context9.next = 6;
+	                  _context10.next = 6;
 	                  break;
 	                }
 
-	                _context9.next = 4;
+	                _context10.next = 4;
 	                return this._deviceTracker.getDeviceByCurve25519Key(result.senderCurve25519Key, txn);
 
 	              case 4:
-	                device = _context9.sent;
+	                device = _context10.sent;
 
 	                this._senderDeviceCache.set(result.senderCurve25519Key, device);
 
@@ -42930,13 +43154,13 @@ var hydrogen = (function (exports) {
 
 	              case 7:
 	              case "end":
-	                return _context9.stop();
+	                return _context10.stop();
 	            }
 	          }
 	        }, _callee9, this);
 	      }));
 
-	      function _verifyDecryptionResult(_x17, _x18) {
+	      function _verifyDecryptionResult(_x20, _x21) {
 	        return _verifyDecryptionResult2.apply(this, arguments);
 	      }
 
@@ -42945,125 +43169,140 @@ var hydrogen = (function (exports) {
 	  }, {
 	    key: "_requestMissingSessionFromBackup",
 	    value: function () {
-	      var _requestMissingSessionFromBackup2 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee10(senderKey, sessionId) {
-	        var session, roomKey, keyIsBestOne, txn;
-	        return regeneratorRuntime.wrap(function _callee10$(_context10) {
+	      var _requestMissingSessionFromBackup2 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee10(senderKey, sessionId, log) {
+	        var _this3 = this;
+
+	        var session, roomKey, keyIsBestOne, retryEventIds, txn;
+	        return regeneratorRuntime.wrap(function _callee10$(_context11) {
 	          while (1) {
-	            switch (_context10.prev = _context10.next) {
+	            switch (_context11.prev = _context11.next) {
 	              case 0:
 	                if (this._sessionBackup) {
-	                  _context10.next = 3;
+	                  _context11.next = 4;
 	                  break;
 	                }
 
+	                log.set("enabled", false);
+
 	                this._notifyMissingMegolmSession();
 
-	                return _context10.abrupt("return");
+	                return _context11.abrupt("return");
 
-	              case 3:
-	                _context10.prev = 3;
-	                _context10.next = 6;
-	                return this._sessionBackup.getSession(this._room.id, sessionId);
+	              case 4:
+	                log.set("id", sessionId);
+	                log.set("senderKey", senderKey);
+	                _context11.prev = 6;
+	                _context11.next = 9;
+	                return this._sessionBackup.getSession(this._room.id, sessionId, log);
 
-	              case 6:
-	                session = _context10.sent;
+	              case 9:
+	                session = _context11.sent;
 
 	                if (!((session === null || session === void 0 ? void 0 : session.algorithm) === MEGOLM_ALGORITHM)) {
-	                  _context10.next = 38;
+	                  _context11.next = 44;
 	                  break;
 	                }
 
 	                if (!(session["sender_key"] !== senderKey)) {
-	                  _context10.next = 11;
+	                  _context11.next = 15;
 	                  break;
 	                }
 
-	                console.warn("Got session key back from backup with different sender key, ignoring", {
-	                  session: session,
-	                  senderKey: senderKey
-	                });
-	                return _context10.abrupt("return");
+	                log.set("wrong_sender_key", session["sender_key"]);
+	                log.logLevel = log.level.Warn;
+	                return _context11.abrupt("return");
 
-	              case 11:
+	              case 15:
 	                roomKey = this._megolmDecryption.roomKeyFromBackup(this._room.id, sessionId, session);
 
 	                if (!roomKey) {
-	                  _context10.next = 36;
+	                  _context11.next = 42;
 	                  break;
 	                }
 
 	                keyIsBestOne = false;
-	                _context10.prev = 14;
-	                _context10.next = 17;
+	                _context11.prev = 18;
+	                _context11.next = 21;
 	                return this._storage.readWriteTxn([this._storage.storeNames.inboundGroupSessions]);
 
-	              case 17:
-	                txn = _context10.sent;
-	                _context10.prev = 18;
-	                _context10.next = 21;
+	              case 21:
+	                txn = _context11.sent;
+	                _context11.prev = 22;
+	                _context11.next = 25;
 	                return this._megolmDecryption.writeRoomKey(roomKey, txn);
 
-	              case 21:
-	                keyIsBestOne = _context10.sent;
-	                _context10.next = 28;
+	              case 25:
+	                keyIsBestOne = _context11.sent;
+	                log.set("isBetter", keyIsBestOne);
+
+	                if (keyIsBestOne) {
+	                  retryEventIds = roomKey.eventIds;
+	                }
+
+	                _context11.next = 34;
 	                break;
 
-	              case 24:
-	                _context10.prev = 24;
-	                _context10.t0 = _context10["catch"](18);
+	              case 30:
+	                _context11.prev = 30;
+	                _context11.t0 = _context11["catch"](22);
 	                txn.abort();
-	                throw _context10.t0;
+	                throw _context11.t0;
 
-	              case 28:
-	                _context10.next = 30;
+	              case 34:
+	                _context11.next = 36;
 	                return txn.complete();
 
-	              case 30:
-	                _context10.prev = 30;
+	              case 36:
+	                _context11.prev = 36;
 	                // can still access properties on it afterwards
 	                // this is just clearing the internal sessionInfo
 	                roomKey.dispose();
-	                return _context10.finish(30);
+	                return _context11.finish(36);
 
-	              case 33:
+	              case 39:
 	                if (!keyIsBestOne) {
-	                  _context10.next = 36;
+	                  _context11.next = 42;
 	                  break;
 	                }
 
-	                _context10.next = 36;
-	                return this._room.notifyRoomKey(roomKey);
+	                _context11.next = 42;
+	                return log.wrap("retryDecryption", function (log) {
+	                  return _this3._room.notifyRoomKey(roomKey, retryEventIds || [], log);
+	                });
 
-	              case 36:
-	                _context10.next = 39;
+	              case 42:
+	                _context11.next = 45;
 	                break;
-
-	              case 38:
-	                if (session === null || session === void 0 ? void 0 : session.algorithm) {
-	                  console.info("Backed-up session of unknown algorithm: ".concat(session.algorithm));
-	                }
-
-	              case 39:
-	                _context10.next = 44;
-	                break;
-
-	              case 41:
-	                _context10.prev = 41;
-	                _context10.t1 = _context10["catch"](3);
-
-	                if (!(_context10.t1.name === "HomeServerError" && _context10.t1.errcode === "M_NOT_FOUND")) {
-	                  console.error("Could not get session ".concat(sessionId, " from backup"), _context10.t1);
-	                }
 
 	              case 44:
+	                if (session === null || session === void 0 ? void 0 : session.algorithm) {
+	                  log.set("unknown algorithm", session.algorithm);
+	                }
+
+	              case 45:
+	                _context11.next = 50;
+	                break;
+
+	              case 47:
+	                _context11.prev = 47;
+	                _context11.t1 = _context11["catch"](6);
+
+	                if (!(_context11.t1.name === "HomeServerError" && _context11.t1.errcode === "M_NOT_FOUND")) {
+	                  log.set("not_found", true);
+	                } else {
+	                  log.error = _context11.t1;
+	                  log.logLevel = log.level.Error;
+	                }
+
+	              case 50:
 	              case "end":
-	                return _context10.stop();
+	                return _context11.stop();
 	            }
 	          }
-	        }, _callee10, this, [[3, 41], [14,, 30, 33], [18, 24]]);
+	        }, _callee10, this, [[6, 47], [18,, 36, 39], [22, 30]]);
 	      }));
 
-	      function _requestMissingSessionFromBackup(_x19, _x20) {
+	      function _requestMissingSessionFromBackup(_x22, _x23, _x24) {
 	        return _requestMissingSessionFromBackup2.apply(this, arguments);
 	      }
 
@@ -43087,47 +43326,47 @@ var hydrogen = (function (exports) {
 	    value: function () {
 	      var _ensureMessageKeyIsShared = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee11(hsApi, log) {
 	        var _this$_lastKeyPreShar,
-	            _this3 = this;
+	            _this4 = this;
 
 	        var roomKeyMessage;
-	        return regeneratorRuntime.wrap(function _callee11$(_context11) {
+	        return regeneratorRuntime.wrap(function _callee11$(_context12) {
 	          while (1) {
-	            switch (_context11.prev = _context11.next) {
+	            switch (_context12.prev = _context12.next) {
 	              case 0:
 	                if (!(((_this$_lastKeyPreShar = this._lastKeyPreShareTime) === null || _this$_lastKeyPreShar === void 0 ? void 0 : _this$_lastKeyPreShar.measure()) < MIN_PRESHARE_INTERVAL)) {
-	                  _context11.next = 2;
+	                  _context12.next = 2;
 	                  break;
 	                }
 
-	                return _context11.abrupt("return");
+	                return _context12.abrupt("return");
 
 	              case 2:
 	                this._lastKeyPreShareTime = this._clock.createMeasure();
-	                _context11.next = 5;
+	                _context12.next = 5;
 	                return this._megolmEncryption.ensureOutboundSession(this._room.id, this._encryptionParams);
 
 	              case 5:
-	                roomKeyMessage = _context11.sent;
+	                roomKeyMessage = _context12.sent;
 
 	                if (!roomKeyMessage) {
-	                  _context11.next = 9;
+	                  _context12.next = 9;
 	                  break;
 	                }
 
-	                _context11.next = 9;
+	                _context12.next = 9;
 	                return log.wrap("share key", function (log) {
-	                  return _this3._shareNewRoomKey(roomKeyMessage, hsApi, log);
+	                  return _this4._shareNewRoomKey(roomKeyMessage, hsApi, log);
 	                });
 
 	              case 9:
 	              case "end":
-	                return _context11.stop();
+	                return _context12.stop();
 	            }
 	          }
 	        }, _callee11, this);
 	      }));
 
-	      function ensureMessageKeyIsShared(_x21, _x22) {
+	      function ensureMessageKeyIsShared(_x25, _x26) {
 	        return _ensureMessageKeyIsShared.apply(this, arguments);
 	      }
 
@@ -43137,41 +43376,41 @@ var hydrogen = (function (exports) {
 	    key: "encrypt",
 	    value: function () {
 	      var _encrypt = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee12(type, content, hsApi, log) {
-	        var _this4 = this;
+	        var _this5 = this;
 
 	        var megolmResult;
-	        return regeneratorRuntime.wrap(function _callee12$(_context12) {
+	        return regeneratorRuntime.wrap(function _callee12$(_context13) {
 	          while (1) {
-	            switch (_context12.prev = _context12.next) {
+	            switch (_context13.prev = _context13.next) {
 	              case 0:
-	                _context12.next = 2;
+	                _context13.next = 2;
 	                return log.wrap("megolm encrypt", function () {
-	                  return _this4._megolmEncryption.encrypt(_this4._room.id, type, content, _this4._encryptionParams);
+	                  return _this5._megolmEncryption.encrypt(_this5._room.id, type, content, _this5._encryptionParams);
 	                });
 
 	              case 2:
-	                megolmResult = _context12.sent;
+	                megolmResult = _context13.sent;
 
 	                if (megolmResult.roomKeyMessage) {
 	                  log.wrapDetached("share key", function (log) {
-	                    return _this4._shareNewRoomKey(megolmResult.roomKeyMessage, hsApi, log);
+	                    return _this5._shareNewRoomKey(megolmResult.roomKeyMessage, hsApi, log);
 	                  });
 	                }
 
-	                return _context12.abrupt("return", {
+	                return _context13.abrupt("return", {
 	                  type: ENCRYPTED_TYPE,
 	                  content: megolmResult.content
 	                });
 
 	              case 5:
 	              case "end":
-	                return _context12.stop();
+	                return _context13.stop();
 	            }
 	          }
 	        }, _callee12);
 	      }));
 
-	      function encrypt(_x23, _x24, _x25, _x26) {
+	      function encrypt(_x27, _x28, _x29, _x30) {
 	        return _encrypt.apply(this, arguments);
 	      }
 
@@ -43204,39 +43443,39 @@ var hydrogen = (function (exports) {
 	    value: function () {
 	      var _shareNewRoomKey2 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee13(roomKeyMessage, hsApi, log) {
 	        var writeOpTxn, operation;
-	        return regeneratorRuntime.wrap(function _callee13$(_context13) {
+	        return regeneratorRuntime.wrap(function _callee13$(_context14) {
 	          while (1) {
-	            switch (_context13.prev = _context13.next) {
+	            switch (_context14.prev = _context14.next) {
 	              case 0:
-	                _context13.next = 2;
+	                _context14.next = 2;
 	                return this._storage.readWriteTxn([this._storage.storeNames.operations]);
 
 	              case 2:
-	                writeOpTxn = _context13.sent;
-	                _context13.prev = 3;
+	                writeOpTxn = _context14.sent;
+	                _context14.prev = 3;
 	                operation = this._writeRoomKeyShareOperation(roomKeyMessage, null, writeOpTxn);
-	                _context13.next = 11;
+	                _context14.next = 11;
 	                break;
 
 	              case 7:
-	                _context13.prev = 7;
-	                _context13.t0 = _context13["catch"](3);
+	                _context14.prev = 7;
+	                _context14.t0 = _context14["catch"](3);
 	                writeOpTxn.abort();
-	                throw _context13.t0;
+	                throw _context14.t0;
 
 	              case 11:
-	                _context13.next = 13;
+	                _context14.next = 13;
 	                return this._processShareRoomKeyOperation(operation, hsApi, log);
 
 	              case 13:
 	              case "end":
-	                return _context13.stop();
+	                return _context14.stop();
 	            }
 	          }
 	        }, _callee13, this, [[3, 7]]);
 	      }));
 
-	      function _shareNewRoomKey(_x27, _x28, _x29) {
+	      function _shareNewRoomKey(_x31, _x32, _x33) {
 	        return _shareNewRoomKey2.apply(this, arguments);
 	      }
 
@@ -43247,23 +43486,23 @@ var hydrogen = (function (exports) {
 	    value: function () {
 	      var _addShareRoomKeyOperationForNewMembers2 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee14(memberChangesArray, txn, log) {
 	        var userIds, roomKeyMessage;
-	        return regeneratorRuntime.wrap(function _callee14$(_context14) {
+	        return regeneratorRuntime.wrap(function _callee14$(_context15) {
 	          while (1) {
-	            switch (_context14.prev = _context14.next) {
+	            switch (_context15.prev = _context15.next) {
 	              case 0:
 	                userIds = memberChangesArray.filter(function (m) {
 	                  return m.hasJoined;
 	                }).map(function (m) {
 	                  return m.userId;
 	                });
-	                _context14.next = 3;
+	                _context15.next = 3;
 	                return this._megolmEncryption.createRoomKeyMessage(this._room.id, txn);
 
 	              case 3:
-	                roomKeyMessage = _context14.sent;
+	                roomKeyMessage = _context15.sent;
 
 	                if (!roomKeyMessage) {
-	                  _context14.next = 8;
+	                  _context15.next = 8;
 	                  break;
 	                }
 
@@ -43276,20 +43515,20 @@ var hydrogen = (function (exports) {
 
 	                this._writeRoomKeyShareOperation(roomKeyMessage, userIds, txn);
 
-	                return _context14.abrupt("return", true);
+	                return _context15.abrupt("return", true);
 
 	              case 8:
-	                return _context14.abrupt("return", false);
+	                return _context15.abrupt("return", false);
 
 	              case 9:
 	              case "end":
-	                return _context14.stop();
+	                return _context15.stop();
 	            }
 	          }
 	        }, _callee14, this);
 	      }));
 
-	      function _addShareRoomKeyOperationForNewMembers(_x30, _x31, _x32) {
+	      function _addShareRoomKeyOperationForNewMembers(_x34, _x35, _x36) {
 	        return _addShareRoomKeyOperationForNewMembers2.apply(this, arguments);
 	      }
 
@@ -43299,128 +43538,128 @@ var hydrogen = (function (exports) {
 	    key: "flushPendingRoomKeyShares",
 	    value: function () {
 	      var _flushPendingRoomKeyShares = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee15(hsApi, operations, log) {
-	        var _this5 = this;
+	        var _this6 = this;
 
-	        var txn, _iterator3, _step3, _loop, _ret;
+	        var txn, _iterator3, _step3, _loop2, _ret;
 
-	        return regeneratorRuntime.wrap(function _callee15$(_context16) {
+	        return regeneratorRuntime.wrap(function _callee15$(_context17) {
 	          while (1) {
-	            switch (_context16.prev = _context16.next) {
+	            switch (_context17.prev = _context17.next) {
 	              case 0:
 	                if (!this._isFlushingRoomKeyShares) {
-	                  _context16.next = 2;
+	                  _context17.next = 2;
 	                  break;
 	                }
 
-	                return _context16.abrupt("return");
+	                return _context17.abrupt("return");
 
 	              case 2:
 	                this._isFlushingRoomKeyShares = true;
-	                _context16.prev = 3;
+	                _context17.prev = 3;
 
 	                if (operations) {
-	                  _context16.next = 11;
+	                  _context17.next = 11;
 	                  break;
 	                }
 
-	                _context16.next = 7;
+	                _context17.next = 7;
 	                return this._storage.readTxn([this._storage.storeNames.operations]);
 
 	              case 7:
-	                txn = _context16.sent;
-	                _context16.next = 10;
+	                txn = _context17.sent;
+	                _context17.next = 10;
 	                return txn.operations.getAllByTypeAndScope("share_room_key", this._room.id);
 
 	              case 10:
-	                operations = _context16.sent;
+	                operations = _context17.sent;
 
 	              case 11:
 	                _iterator3 = _createForOfIteratorHelper(operations);
-	                _context16.prev = 12;
-	                _loop = /*#__PURE__*/regeneratorRuntime.mark(function _loop() {
+	                _context17.prev = 12;
+	                _loop2 = /*#__PURE__*/regeneratorRuntime.mark(function _loop2() {
 	                  var operation;
-	                  return regeneratorRuntime.wrap(function _loop$(_context15) {
+	                  return regeneratorRuntime.wrap(function _loop2$(_context16) {
 	                    while (1) {
-	                      switch (_context15.prev = _context15.next) {
+	                      switch (_context16.prev = _context16.next) {
 	                        case 0:
 	                          operation = _step3.value;
 
 	                          if (!(operation.type !== "share_room_key")) {
-	                            _context15.next = 3;
+	                            _context16.next = 3;
 	                            break;
 	                          }
 
-	                          return _context15.abrupt("return", "continue");
+	                          return _context16.abrupt("return", "continue");
 
 	                        case 3:
-	                          _context15.next = 5;
+	                          _context16.next = 5;
 	                          return log.wrap("operation", function (log) {
-	                            return _this5._processShareRoomKeyOperation(operation, hsApi, log);
+	                            return _this6._processShareRoomKeyOperation(operation, hsApi, log);
 	                          });
 
 	                        case 5:
 	                        case "end":
-	                          return _context15.stop();
+	                          return _context16.stop();
 	                      }
 	                    }
-	                  }, _loop);
+	                  }, _loop2);
 	                });
 
 	                _iterator3.s();
 
 	              case 15:
 	                if ((_step3 = _iterator3.n()).done) {
-	                  _context16.next = 22;
+	                  _context17.next = 22;
 	                  break;
 	                }
 
-	                return _context16.delegateYield(_loop(), "t0", 17);
+	                return _context17.delegateYield(_loop2(), "t0", 17);
 
 	              case 17:
-	                _ret = _context16.t0;
+	                _ret = _context17.t0;
 
 	                if (!(_ret === "continue")) {
-	                  _context16.next = 20;
+	                  _context17.next = 20;
 	                  break;
 	                }
 
-	                return _context16.abrupt("continue", 20);
+	                return _context17.abrupt("continue", 20);
 
 	              case 20:
-	                _context16.next = 15;
+	                _context17.next = 15;
 	                break;
 
 	              case 22:
-	                _context16.next = 27;
+	                _context17.next = 27;
 	                break;
 
 	              case 24:
-	                _context16.prev = 24;
-	                _context16.t1 = _context16["catch"](12);
+	                _context17.prev = 24;
+	                _context17.t1 = _context17["catch"](12);
 
-	                _iterator3.e(_context16.t1);
+	                _iterator3.e(_context17.t1);
 
 	              case 27:
-	                _context16.prev = 27;
+	                _context17.prev = 27;
 
 	                _iterator3.f();
 
-	                return _context16.finish(27);
+	                return _context17.finish(27);
 
 	              case 30:
-	                _context16.prev = 30;
+	                _context17.prev = 30;
 	                this._isFlushingRoomKeyShares = false;
-	                return _context16.finish(30);
+	                return _context17.finish(30);
 
 	              case 33:
 	              case "end":
-	                return _context16.stop();
+	                return _context17.stop();
 	            }
 	          }
 	        }, _callee15, this, [[3,, 30, 33], [12, 24, 27, 30]]);
 	      }));
 
-	      function flushPendingRoomKeyShares(_x33, _x34, _x35) {
+	      function flushPendingRoomKeyShares(_x37, _x38, _x39) {
 	        return _flushPendingRoomKeyShares.apply(this, arguments);
 	      }
 
@@ -43444,79 +43683,79 @@ var hydrogen = (function (exports) {
 	    key: "_processShareRoomKeyOperation",
 	    value: function () {
 	      var _processShareRoomKeyOperation2 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee17(operation, hsApi, log) {
-	        var _this6 = this;
+	        var _this7 = this;
 
 	        var devices, userIds, messages, missingDevices;
-	        return regeneratorRuntime.wrap(function _callee17$(_context18) {
+	        return regeneratorRuntime.wrap(function _callee17$(_context19) {
 	          while (1) {
-	            switch (_context18.prev = _context18.next) {
+	            switch (_context19.prev = _context19.next) {
 	              case 0:
 	                log.set("id", operation.id);
-	                _context18.next = 3;
+	                _context19.next = 3;
 	                return this._deviceTracker.trackRoom(this._room, log);
 
 	              case 3:
 	                if (!(operation.userIds === null)) {
-	                  _context18.next = 13;
+	                  _context19.next = 13;
 	                  break;
 	                }
 
-	                _context18.next = 6;
+	                _context19.next = 6;
 	                return this._deviceTracker.devicesForTrackedRoom(this._room.id, hsApi, log);
 
 	              case 6:
-	                devices = _context18.sent;
+	                devices = _context19.sent;
 	                userIds = Array.from(devices.reduce(function (set, device) {
 	                  return set.add(device.userId);
 	                }, new Set()));
 	                operation.userIds = userIds;
-	                _context18.next = 11;
+	                _context19.next = 11;
 	                return this._updateOperationsStore(function (operations) {
 	                  return operations.update(operation);
 	                });
 
 	              case 11:
-	                _context18.next = 16;
+	                _context19.next = 16;
 	                break;
 
 	              case 13:
-	                _context18.next = 15;
+	                _context19.next = 15;
 	                return this._deviceTracker.devicesForRoomMembers(this._room.id, operation.userIds, hsApi, log);
 
 	              case 15:
-	                devices = _context18.sent;
+	                devices = _context19.sent;
 
 	              case 16:
-	                _context18.next = 18;
+	                _context19.next = 18;
 	                return log.wrap("olm encrypt", function (log) {
-	                  return _this6._olmEncryption.encrypt("m.room_key", operation.roomKeyMessage, devices, hsApi, log);
+	                  return _this7._olmEncryption.encrypt("m.room_key", operation.roomKeyMessage, devices, hsApi, log);
 	                });
 
 	              case 18:
-	                messages = _context18.sent;
+	                messages = _context19.sent;
 	                missingDevices = devices.filter(function (d) {
 	                  return !messages.some(function (m) {
 	                    return m.device === d;
 	                  });
 	                });
-	                _context18.next = 22;
+	                _context19.next = 22;
 	                return log.wrap("send", function (log) {
-	                  return _this6._sendMessagesToDevices(ENCRYPTED_TYPE, messages, hsApi, log);
+	                  return _this7._sendMessagesToDevices(ENCRYPTED_TYPE, messages, hsApi, log);
 	                });
 
 	              case 22:
 	                if (!missingDevices.length) {
-	                  _context18.next = 25;
+	                  _context19.next = 25;
 	                  break;
 	                }
 
-	                _context18.next = 25;
+	                _context19.next = 25;
 	                return log.wrap("missingDevices", /*#__PURE__*/function () {
 	                  var _ref8 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee16(log) {
 	                    var unsentUserIds, withheldMessage;
-	                    return regeneratorRuntime.wrap(function _callee16$(_context17) {
+	                    return regeneratorRuntime.wrap(function _callee16$(_context18) {
 	                      while (1) {
-	                        switch (_context17.prev = _context17.next) {
+	                        switch (_context18.prev = _context18.next) {
 	                          case 0:
 	                            log.set("devices", missingDevices.map(function (d) {
 	                              return d.deviceId;
@@ -43530,45 +43769,45 @@ var hydrogen = (function (exports) {
 	                            operation.userIds = unsentUserIds; // first remove the users that we've sent the keys already from the operation,
 	                            // so if anything fails, we don't send them again
 
-	                            _context17.next = 6;
-	                            return _this6._updateOperationsStore(function (operations) {
+	                            _context18.next = 6;
+	                            return _this7._updateOperationsStore(function (operations) {
 	                              return operations.update(operation);
 	                            });
 
 	                          case 6:
 	                            // now, let the devices we could not claim their key
-	                            withheldMessage = _this6._megolmEncryption.createWithheldMessage(operation.roomKeyMessage, "m.no_olm", "OTKs exhausted");
-	                            _context17.next = 9;
-	                            return _this6._sendSharedMessageToDevices("org.matrix.room_key.withheld", withheldMessage, missingDevices, hsApi, log);
+	                            withheldMessage = _this7._megolmEncryption.createWithheldMessage(operation.roomKeyMessage, "m.no_olm", "OTKs exhausted");
+	                            _context18.next = 9;
+	                            return _this7._sendSharedMessageToDevices("org.matrix.room_key.withheld", withheldMessage, missingDevices, hsApi, log);
 
 	                          case 9:
 	                          case "end":
-	                            return _context17.stop();
+	                            return _context18.stop();
 	                        }
 	                      }
 	                    }, _callee16);
 	                  }));
 
-	                  return function (_x39) {
+	                  return function (_x43) {
 	                    return _ref8.apply(this, arguments);
 	                  };
 	                }());
 
 	              case 25:
-	                _context18.next = 27;
+	                _context19.next = 27;
 	                return this._updateOperationsStore(function (operations) {
 	                  return operations.remove(operation.id);
 	                });
 
 	              case 27:
 	              case "end":
-	                return _context18.stop();
+	                return _context19.stop();
 	            }
 	          }
 	        }, _callee17, this);
 	      }));
 
-	      function _processShareRoomKeyOperation(_x36, _x37, _x38) {
+	      function _processShareRoomKeyOperation(_x40, _x41, _x42) {
 	        return _processShareRoomKeyOperation2.apply(this, arguments);
 	      }
 
@@ -43579,39 +43818,39 @@ var hydrogen = (function (exports) {
 	    value: function () {
 	      var _updateOperationsStore2 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee18(callback) {
 	        var writeTxn;
-	        return regeneratorRuntime.wrap(function _callee18$(_context19) {
+	        return regeneratorRuntime.wrap(function _callee18$(_context20) {
 	          while (1) {
-	            switch (_context19.prev = _context19.next) {
+	            switch (_context20.prev = _context20.next) {
 	              case 0:
-	                _context19.next = 2;
+	                _context20.next = 2;
 	                return this._storage.readWriteTxn([this._storage.storeNames.operations]);
 
 	              case 2:
-	                writeTxn = _context19.sent;
-	                _context19.prev = 3;
+	                writeTxn = _context20.sent;
+	                _context20.prev = 3;
 	                callback(writeTxn.operations);
-	                _context19.next = 11;
+	                _context20.next = 11;
 	                break;
 
 	              case 7:
-	                _context19.prev = 7;
-	                _context19.t0 = _context19["catch"](3);
+	                _context20.prev = 7;
+	                _context20.t0 = _context20["catch"](3);
 	                writeTxn.abort();
-	                throw _context19.t0;
+	                throw _context20.t0;
 
 	              case 11:
-	                _context19.next = 13;
+	                _context20.next = 13;
 	                return writeTxn.complete();
 
 	              case 13:
 	              case "end":
-	                return _context19.stop();
+	                return _context20.stop();
 	            }
 	          }
 	        }, _callee18, this, [[3, 7]]);
 	      }));
 
-	      function _updateOperationsStore(_x40) {
+	      function _updateOperationsStore(_x44) {
 	        return _updateOperationsStore2.apply(this, arguments);
 	      }
 
@@ -43622,9 +43861,9 @@ var hydrogen = (function (exports) {
 	    value: function () {
 	      var _sendSharedMessageToDevices2 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee19(type, message, devices, hsApi, log) {
 	        var devicesByUser, payload, txnId;
-	        return regeneratorRuntime.wrap(function _callee19$(_context20) {
+	        return regeneratorRuntime.wrap(function _callee19$(_context21) {
 	          while (1) {
-	            switch (_context20.prev = _context20.next) {
+	            switch (_context21.prev = _context21.next) {
 	              case 0:
 	                devicesByUser = groupBy(devices, function (device) {
 	                  return device.userId;
@@ -43643,20 +43882,20 @@ var hydrogen = (function (exports) {
 	                  }, {})
 	                };
 	                txnId = makeTxnId();
-	                _context20.next = 5;
+	                _context21.next = 5;
 	                return hsApi.sendToDevice(type, payload, txnId, {
 	                  log: log
 	                }).response();
 
 	              case 5:
 	              case "end":
-	                return _context20.stop();
+	                return _context21.stop();
 	            }
 	          }
 	        }, _callee19);
 	      }));
 
-	      function _sendSharedMessageToDevices(_x41, _x42, _x43, _x44, _x45) {
+	      function _sendSharedMessageToDevices(_x45, _x46, _x47, _x48, _x49) {
 	        return _sendSharedMessageToDevices2.apply(this, arguments);
 	      }
 
@@ -43667,9 +43906,9 @@ var hydrogen = (function (exports) {
 	    value: function () {
 	      var _sendMessagesToDevices2 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee20(type, messages, hsApi, log) {
 	        var messagesByUser, payload, txnId;
-	        return regeneratorRuntime.wrap(function _callee20$(_context21) {
+	        return regeneratorRuntime.wrap(function _callee20$(_context22) {
 	          while (1) {
-	            switch (_context21.prev = _context21.next) {
+	            switch (_context22.prev = _context22.next) {
 	              case 0:
 	                log.set("messages", messages.length);
 	                messagesByUser = groupBy(messages, function (message) {
@@ -43689,20 +43928,20 @@ var hydrogen = (function (exports) {
 	                  }, {})
 	                };
 	                txnId = makeTxnId();
-	                _context21.next = 6;
+	                _context22.next = 6;
 	                return hsApi.sendToDevice(type, payload, txnId, {
 	                  log: log
 	                }).response();
 
 	              case 6:
 	              case "end":
-	                return _context21.stop();
+	                return _context22.stop();
 	            }
 	          }
 	        }, _callee20);
 	      }));
 
-	      function _sendMessagesToDevices(_x46, _x47, _x48, _x49) {
+	      function _sendMessagesToDevices(_x50, _x51, _x52, _x53) {
 	        return _sendMessagesToDevices2.apply(this, arguments);
 	      }
 
@@ -43762,25 +44001,25 @@ var hydrogen = (function (exports) {
 	    key: "decrypt",
 	    value: function () {
 	      var _decrypt = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee21() {
-	        return regeneratorRuntime.wrap(function _callee21$(_context22) {
+	        return regeneratorRuntime.wrap(function _callee21$(_context23) {
 	          while (1) {
-	            switch (_context22.prev = _context22.next) {
+	            switch (_context23.prev = _context23.next) {
 	              case 0:
-	                _context22.t0 = DecryptionChanges$2;
-	                _context22.next = 3;
+	                _context23.t0 = DecryptionChanges$2;
+	                _context23.next = 3;
 	                return this._megolmDecryptionPreparation.decrypt();
 
 	              case 3:
-	                _context22.t1 = _context22.sent;
-	                _context22.t2 = this._extraErrors;
-	                _context22.t3 = this._source;
-	                _context22.t4 = this._roomEncryption;
-	                _context22.t5 = this._events;
-	                return _context22.abrupt("return", new _context22.t0(_context22.t1, _context22.t2, _context22.t3, _context22.t4, _context22.t5));
+	                _context23.t1 = _context23.sent;
+	                _context23.t2 = this._extraErrors;
+	                _context23.t3 = this._source;
+	                _context23.t4 = this._roomEncryption;
+	                _context23.t5 = this._events;
+	                return _context23.abrupt("return", new _context23.t0(_context23.t1, _context23.t2, _context23.t3, _context23.t4, _context23.t5));
 
 	              case 9:
 	              case "end":
-	                return _context22.stop();
+	                return _context23.stop();
 	            }
 	          }
 	        }, _callee21, this);
@@ -43816,36 +44055,36 @@ var hydrogen = (function (exports) {
 	  _createClass(DecryptionChanges, [{
 	    key: "write",
 	    value: function () {
-	      var _write = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee22(txn) {
+	      var _write = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee22(txn, log) {
 	        var _yield$this$_megolmDe, results, errors;
 
-	        return regeneratorRuntime.wrap(function _callee22$(_context23) {
+	        return regeneratorRuntime.wrap(function _callee22$(_context24) {
 	          while (1) {
-	            switch (_context23.prev = _context23.next) {
+	            switch (_context24.prev = _context24.next) {
 	              case 0:
-	                _context23.next = 2;
+	                _context24.next = 2;
 	                return this._megolmDecryptionChanges.write(txn);
 
 	              case 2:
-	                _yield$this$_megolmDe = _context23.sent;
+	                _yield$this$_megolmDe = _context24.sent;
 	                results = _yield$this$_megolmDe.results;
 	                errors = _yield$this$_megolmDe.errors;
 	                mergeMap(this._extraErrors, errors);
-	                _context23.next = 8;
-	                return this._roomEncryption._processDecryptionResults(this._events, results, errors, this._source, txn);
+	                _context24.next = 8;
+	                return this._roomEncryption._processDecryptionResults(this._events, results, errors, this._source, txn, log);
 
 	              case 8:
-	                return _context23.abrupt("return", new BatchDecryptionResult(results, errors, this._roomEncryption));
+	                return _context24.abrupt("return", new BatchDecryptionResult(results, errors, this._roomEncryption));
 
 	              case 9:
 	              case "end":
-	                return _context23.stop();
+	                return _context24.stop();
 	            }
 	          }
 	        }, _callee22, this);
 	      }));
 
-	      function write(_x50) {
+	      function write(_x54, _x55) {
 	        return _write.apply(this, arguments);
 	      }
 
@@ -43895,10 +44134,10 @@ var hydrogen = (function (exports) {
 	  }, {
 	    key: "verifySenders",
 	    value: function verifySenders(txn) {
-	      var _this7 = this;
+	      var _this8 = this;
 
 	      return Promise.all(Array.from(this.results.values()).map(function (result) {
-	        return _this7._roomEncryption._verifyDecryptionResult(result, txn);
+	        return _this8._roomEncryption._verifyDecryptionResult(result, txn);
 	      }));
 	    }
 	  }]);
@@ -46552,6 +46791,7 @@ var hydrogen = (function (exports) {
 	          while (1) {
 	            switch (_context6.prev = _context6.next) {
 	              case 0:
+	                log.set("appVersion", this._platform.version);
 	                clock = this._platform.clock;
 	                this._sessionStartedByReconnector = false;
 
@@ -46570,10 +46810,10 @@ var hydrogen = (function (exports) {
 	                  createTimeout: clock.createTimeout
 	                });
 	                this._sessionId = sessionInfo.id;
-	                _context6.next = 8;
+	                _context6.next = 9;
 	                return this._platform.storageFactory.create(sessionInfo.id);
 
-	              case 8:
+	              case 9:
 	                this._storage = _context6.sent;
 	                // no need to pass access token to session
 	                filteredSessionInfo = {
@@ -46581,25 +46821,25 @@ var hydrogen = (function (exports) {
 	                  userId: sessionInfo.userId,
 	                  homeServer: sessionInfo.homeServer
 	                };
-	                _context6.next = 12;
+	                _context6.next = 13;
 	                return this._olmPromise;
 
-	              case 12:
+	              case 13:
 	                olm = _context6.sent;
 	                olmWorker = null;
 
 	                if (!this._workerPromise) {
-	                  _context6.next = 18;
+	                  _context6.next = 19;
 	                  break;
 	                }
 
-	                _context6.next = 17;
+	                _context6.next = 18;
 	                return this._workerPromise;
 
-	              case 17:
+	              case 18:
 	                olmWorker = _context6.sent;
 
-	              case 18:
+	              case 19:
 	                this._requestScheduler = new RequestScheduler({
 	                  hsApi: hsApi,
 	                  clock: clock
@@ -46620,23 +46860,23 @@ var hydrogen = (function (exports) {
 	                  mediaRepository: mediaRepository,
 	                  platform: this._platform
 	                });
-	                _context6.next = 24;
+	                _context6.next = 25;
 	                return this._session.load(log);
 
-	              case 24:
+	              case 25:
 	                if (!isNewLogin) {
-	                  _context6.next = 28;
+	                  _context6.next = 29;
 	                  break;
 	                }
 
 	                this._status.set(LoadStatus.SessionSetup);
 
-	                _context6.next = 28;
+	                _context6.next = 29;
 	                return log.wrap("createIdentity", function (log) {
 	                  return _this3._session.createIdentity(log);
 	                });
 
-	              case 28:
+	              case 29:
 	                this._sync = new Sync({
 	                  hsApi: this._requestScheduler.hsApi,
 	                  storage: this._storage,
@@ -46677,12 +46917,12 @@ var hydrogen = (function (exports) {
 	                    }());
 	                  }
 	                });
-	                _context6.next = 32;
+	                _context6.next = 33;
 	                return log.wrap("wait first sync", function () {
 	                  return _this3._waitForFirstSync();
 	                });
 
-	              case 32:
+	              case 33:
 	                this._status.set(LoadStatus.Ready); // if the sync failed, and then the reconnector
 	                // restored the connection, it would have already
 	                // started to session, so check first
@@ -46690,24 +46930,24 @@ var hydrogen = (function (exports) {
 
 
 	                if (this._sessionStartedByReconnector) {
-	                  _context6.next = 39;
+	                  _context6.next = 40;
 	                  break;
 	                }
 
-	                _context6.next = 36;
+	                _context6.next = 37;
 	                return hsApi.versions({
 	                  timeout: 10000,
 	                  log: log
 	                }).response();
 
-	              case 36:
+	              case 37:
 	                lastVersionsResponse = _context6.sent;
-	                _context6.next = 39;
+	                _context6.next = 40;
 	                return log.wrap("session start", function (log) {
 	                  return _this3._session.start(lastVersionsResponse, log);
 	                });
 
-	              case 39:
+	              case 40:
 	              case "end":
 	                return _context6.stop();
 	            }
