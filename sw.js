@@ -15,11 +15,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-const VERSION = "0.1.39";
-const GLOBAL_HASH = "3617775051";
+const VERSION = "0.1.40";
+const GLOBAL_HASH = "3401014219";
 const UNHASHED_PRECACHED_ASSETS = ["index.html"];
-const HASHED_PRECACHED_ASSETS = ["olm-1421970081.js","olm-4289088762.wasm","hydrogen-476942126.js","download-sandbox-3001206039.html","themes/element/element-logo-2959259787.svg","themes/element/icons/chevron-left-1539668473.svg","themes/element/icons/chevron-right-787082136.svg","themes/element/icons/clear-2843548839.svg","themes/element/icons/disable-grid-2157868734.svg","themes/element/icons/dismiss-1031249481.svg","themes/element/icons/enable-grid-3565802253.svg","themes/element/icons/paperclip-503625323.svg","themes/element/icons/search-1193336244.svg","themes/element/icons/send-4065347741.svg","themes/element/icons/settings-3021269543.svg","hydrogen-2668844176.css","themes/element/bundle-1921906448.css","themes/bubbles/bundle-1494402621.css","icon-2793984973.png","icon-maskable-317721575.png"];
-const HASHED_CACHED_ON_REQUEST_ASSETS = ["olm_legacy-3232457086.js","hydrogen-legacy-1568324506.js","worker-3696849156.js","themes/element/inter/Inter-Black-276207522.woff","themes/element/inter/Inter-Black-3721205557.woff2","themes/element/inter/Inter-BlackItalic-3159247813.woff","themes/element/inter/Inter-BlackItalic-3355577873.woff2","themes/element/inter/Inter-Bold-4187626158.woff","themes/element/inter/Inter-Bold-1381170295.woff2","themes/element/inter/Inter-BoldItalic-641187949.woff","themes/element/inter/Inter-BoldItalic-4000810957.woff2","themes/element/inter/Inter-ExtraBold-3888913940.woff","themes/element/inter/Inter-ExtraBold-2973547570.woff2","themes/element/inter/Inter-ExtraBoldItalic-2880676406.woff","themes/element/inter/Inter-ExtraBoldItalic-4023252294.woff2","themes/element/inter/Inter-ExtraLight-3277895962.woff","themes/element/inter/Inter-ExtraLight-3116834956.woff2","themes/element/inter/Inter-ExtraLightItalic-3022762143.woff","themes/element/inter/Inter-ExtraLightItalic-542652406.woff2","themes/element/inter/Inter-Italic-4024721388.woff","themes/element/inter/Inter-Italic-2832519998.woff2","themes/element/inter/Inter-Light-3990448997.woff","themes/element/inter/Inter-Light-3879803958.woff2","themes/element/inter/Inter-LightItalic-412813693.woff","themes/element/inter/Inter-LightItalic-1187583345.woff2","themes/element/inter/Inter-Medium-2285329551.woff","themes/element/inter/Inter-Medium-1918055220.woff2","themes/element/inter/Inter-MediumItalic-1722521156.woff","themes/element/inter/Inter-MediumItalic-2244299954.woff2","themes/element/inter/Inter-Regular-2779214592.woff","themes/element/inter/Inter-Regular-441590695.woff2","themes/element/inter/Inter-SemiBold-1906312195.woff","themes/element/inter/Inter-SemiBold-2507251795.woff2","themes/element/inter/Inter-SemiBoldItalic-3778207334.woff","themes/element/inter/Inter-SemiBoldItalic-152029837.woff2","themes/element/inter/Inter-Thin-1593561269.woff","themes/element/inter/Inter-Thin-1469368522.woff2","themes/element/inter/Inter-ThinItalic-1888295987.woff","themes/element/inter/Inter-ThinItalic-173059207.woff2","manifest-1157650900.json"];
+const HASHED_PRECACHED_ASSETS = ["olm-1421970081.js","olm-4289088762.wasm","hydrogen-2841373523.js","download-sandbox-3001206039.html","themes/element/element-logo-2959259787.svg","themes/element/icons/chevron-left-1539668473.svg","themes/element/icons/chevron-right-787082136.svg","themes/element/icons/clear-2843548839.svg","themes/element/icons/disable-grid-2157868734.svg","themes/element/icons/dismiss-1031249481.svg","themes/element/icons/enable-grid-3565802253.svg","themes/element/icons/paperclip-503625323.svg","themes/element/icons/search-1193336244.svg","themes/element/icons/send-4065347741.svg","themes/element/icons/settings-3021269543.svg","hydrogen-61502860.css","themes/element/bundle-1921906448.css","themes/bubbles/bundle-1494402621.css","icon-2793984973.png","icon-maskable-317721575.png"];
+const HASHED_CACHED_ON_REQUEST_ASSETS = ["olm_legacy-3232457086.js","hydrogen-legacy-3654059964.js","worker-3696849156.js","themes/element/inter/Inter-Black-276207522.woff","themes/element/inter/Inter-Black-3721205557.woff2","themes/element/inter/Inter-BlackItalic-3159247813.woff","themes/element/inter/Inter-BlackItalic-3355577873.woff2","themes/element/inter/Inter-Bold-4187626158.woff","themes/element/inter/Inter-Bold-1381170295.woff2","themes/element/inter/Inter-BoldItalic-641187949.woff","themes/element/inter/Inter-BoldItalic-4000810957.woff2","themes/element/inter/Inter-ExtraBold-3888913940.woff","themes/element/inter/Inter-ExtraBold-2973547570.woff2","themes/element/inter/Inter-ExtraBoldItalic-2880676406.woff","themes/element/inter/Inter-ExtraBoldItalic-4023252294.woff2","themes/element/inter/Inter-ExtraLight-3277895962.woff","themes/element/inter/Inter-ExtraLight-3116834956.woff2","themes/element/inter/Inter-ExtraLightItalic-3022762143.woff","themes/element/inter/Inter-ExtraLightItalic-542652406.woff2","themes/element/inter/Inter-Italic-4024721388.woff","themes/element/inter/Inter-Italic-2832519998.woff2","themes/element/inter/Inter-Light-3990448997.woff","themes/element/inter/Inter-Light-3879803958.woff2","themes/element/inter/Inter-LightItalic-412813693.woff","themes/element/inter/Inter-LightItalic-1187583345.woff2","themes/element/inter/Inter-Medium-2285329551.woff","themes/element/inter/Inter-Medium-1918055220.woff2","themes/element/inter/Inter-MediumItalic-1722521156.woff","themes/element/inter/Inter-MediumItalic-2244299954.woff2","themes/element/inter/Inter-Regular-2779214592.woff","themes/element/inter/Inter-Regular-441590695.woff2","themes/element/inter/Inter-SemiBold-1906312195.woff","themes/element/inter/Inter-SemiBold-2507251795.woff2","themes/element/inter/Inter-SemiBoldItalic-3778207334.woff","themes/element/inter/Inter-SemiBoldItalic-152029837.woff2","themes/element/inter/Inter-Thin-1593561269.woff","themes/element/inter/Inter-Thin-1469368522.woff2","themes/element/inter/Inter-ThinItalic-1888295987.woff","themes/element/inter/Inter-ThinItalic-173059207.woff2","manifest-1157650900.json"];
+const NOTIFICATION_BADGE_ICON = "icon-2793984973.png";
 const unhashedCacheName = `hydrogen-assets-${GLOBAL_HASH}`;
 const hashedCacheName = `hydrogen-assets`;
 const mediaThumbnailCacheName = `hydrogen-media-thumbnails-v2`;
@@ -35,6 +36,13 @@ self.addEventListener('install', function(e) {
             }
         }));
     })());
+});
+
+self.addEventListener('activate', (event) => {
+    // on a first page load/sw install,
+    // start using the service worker on all pages straight away
+    self.clients.claim();
+    event.waitUntil(purgeOldCaches());
 });
 
 async function purgeOldCaches() {
@@ -60,15 +68,6 @@ async function purgeOldCaches() {
     }
 }
 
-self.addEventListener('activate', (event) => {
-    event.waitUntil(Promise.all([
-        purgeOldCaches(),
-        // on a first page load/sw install,
-        // start using the service worker on all pages straight away
-        self.clients.claim()
-    ]));
-});
-
 self.addEventListener('fetch', (event) => {
     event.respondWith(handleRequest(event.request));
 });
@@ -85,9 +84,11 @@ function isCacheableThumbnail(url) {
 }
 
 const baseURL = new URL(self.registration.scope);
+let pendingFetchAbortController = new AbortController();
 async function handleRequest(request) {
     try {
         const url = new URL(request.url);
+        // rewrite / to /index.html so it hits the cache
         if (url.origin === baseURL.origin && url.pathname === baseURL.pathname) {
             request = new Request(new URL("index.html", baseURL.href));
         }
@@ -96,15 +97,15 @@ async function handleRequest(request) {
             // use cors so the resource in the cache isn't opaque and uses up to 7mb
             // https://developers.google.com/web/tools/chrome-devtools/progressive-web-apps?utm_source=devtools#opaque-responses
             if (isCacheableThumbnail(url)) {
-                response = await fetch(request, {mode: "cors", credentials: "omit"});
+                response = await fetch(request, {signal: pendingFetchAbortController.signal, mode: "cors", credentials: "omit"});
             } else {
-                response = await fetch(request);
+                response = await fetch(request, {signal: pendingFetchAbortController.signal});
             }
             await updateCache(request, response);
         }
         return response;
     } catch (err) {
-        if (!(err instanceof TypeError)) {
+        if (err.name !== "TypeError" && err.name !== "AbortError") {
             console.error("error in service worker", err);
         }
         throw err;
@@ -172,16 +173,108 @@ self.addEventListener('message', (event) => {
             case "skipWaiting":
                 self.skipWaiting();
                 break;
+            case "haltRequests":
+                event.waitUntil(haltRequests().finally(() => reply()));
+                break;
             case "closeSession":
                 event.waitUntil(
                     closeSession(event.data.payload.sessionId, event.source.id)
-                        .then(() => reply())
+                        .finally(() => reply())
                 );
                 break;
         }
     }
 });
 
+const NOTIF_TAG_NEW_MESSAGE = "new_message";
+
+async function openClientFromNotif(event) {
+    if (event.notification.tag !== NOTIF_TAG_NEW_MESSAGE) {
+        console.log("clicked notif with tag", event.notification.tag);
+        return;
+    }
+    const {sessionId, roomId} = event.notification.data;
+    const sessionHash = `#/session/${sessionId}`;
+    const roomHash = `${sessionHash}/room/${roomId}`;
+    const roomURL = `/${roomHash}`;
+    const clientWithSession = await findClient(async client => {
+        return await sendAndWaitForReply(client, "hasSessionOpen", {sessionId});
+    });
+    if (clientWithSession) {
+        console.log("notificationclick: client has session open, showing room there");
+        clientWithSession.navigate(roomURL);
+        if ('focus' in clientWithSession) {
+            try {
+                await clientWithSession.focus();
+            } catch (err) { console.error(err); } // I've had this throw on me on Android
+        }
+    } else if (self.clients.openWindow) {
+        console.log("notificationclick: no client found with session open, opening new window");
+        await self.clients.openWindow(roomURL);
+    }
+}
+
+self.addEventListener('notificationclick', event => {
+    event.notification.close();
+    event.waitUntil(openClientFromNotif(event));
+});
+
+async function handlePushNotification(n) {
+    console.log("got a push message", n);
+    const sessionId = n.session_id;
+    let sender = n.sender_display_name || n.sender;
+    if (sender && n.event_id) {
+        const roomId = n.room_id;
+        const hasFocusedClientOnRoom = !!await findClient(async client => {
+            if (client.visibilityState === "visible" && client.focused) {
+                return await sendAndWaitForReply(client, "hasRoomOpen", {sessionId, roomId});
+            }
+        });
+        if (hasFocusedClientOnRoom) {
+            console.log("client is focused, room is open, don't show notif");
+            return;
+        }
+        const newMessageNotifs = Array.from(await self.registration.getNotifications({tag: NOTIF_TAG_NEW_MESSAGE}));
+        const notifsForRoom = newMessageNotifs.filter(n => n.data.roomId === roomId);
+        const hasMultiNotification = notifsForRoom.some(n => n.data.multi);
+        const hasSingleNotifsForRoom = newMessageNotifs.some(n => !n.data.multi);
+        const roomName = n.room_name || n.room_alias;
+        let multi = false;
+        let label;
+        let body;
+        if (hasMultiNotification) {
+            console.log("already have a multi message, don't do anything");
+            return;
+        } else if (hasSingleNotifsForRoom) {
+            console.log("showing multi message notification");
+            multi = true;
+            label = roomName || sender;
+            body = "New messages";
+        } else {
+            console.log("showing new message notification");
+            if (roomName && roomName !== sender) {
+                label = `${sender} in ${roomName}`;
+            } else {
+                label = sender;
+            }
+            body = n.content?.body || "New message";
+        }
+        await self.registration.showNotification(label, {
+            body,
+            data: {sessionId, roomId, multi},
+            tag: NOTIF_TAG_NEW_MESSAGE,
+            badge: NOTIFICATION_BADGE_ICON
+        });
+    }
+    // we could consider hiding previous notifications here based on the unread count
+    // (although we can't really figure out which notifications to hide) and also hiding
+    // notifications makes it hard to ensure we always show a notification after a push message
+    // when no client is visible, see https://goo.gl/yqv4Q4
+}
+
+self.addEventListener('push', event => {
+    event.waitUntil(handlePushNotification(event.data.json()));
+});
 
 async function closeSession(sessionId, requestingClientId) {
     const clients = await self.clients.matchAll();
@@ -190,6 +283,16 @@ async function closeSession(sessionId, requestingClientId) {
             await sendAndWaitForReply(client, "closeSession", {sessionId});
         }
     }));
+}
+
+async function haltRequests() {
+    // first ask all clients to block sending any more requests
+    const clients = await self.clients.matchAll({type: "window"});
+    await Promise.all(clients.map(client => {
+        return sendAndWaitForReply(client, "haltRequests");
+    }));
+    // and only then abort the current requests
+    pendingFetchAbortController.abort();
 }
 
 const pendingReplies = new Map();
@@ -202,4 +305,13 @@ function sendAndWaitForReply(client, type, payload) {
     });
     client.postMessage({type, id, payload});
     return promise;
+}
+
+async function findClient(predicate) {
+    const clientList = await self.clients.matchAll({type: "window"});
+    for (const client of clientList) {
+        if (await predicate(client)) {
+            return client;
+        }
+    }
 }

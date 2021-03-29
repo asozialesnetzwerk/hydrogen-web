@@ -172,6 +172,9 @@ main {
     left: 0;
     right: 0;
     z-index: 1;
+    /* Safari requires an explicit height on the container to prevent picture content from collapsing */
+    box-sizing: border-box;
+    height: 100%;
 }
 .TimelinePanel {
     flex: 3 1;
@@ -263,6 +266,8 @@ limitations under the License.
 }
 .SessionPickerView li .user-id {
     flex: 1 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 .SessionPickerView li .error {
     margin: 0 20px;

@@ -160,8 +160,11 @@ class RequestResult$1 {
         return this.promise;
     }
 }
-function createFetchRequest(createTimeout) {
+function createFetchRequest(createTimeout, serviceWorkerHandler) {
     return function fetchRequest(url, requestOptions) {
+        if (serviceWorkerHandler?.haltRequests) {
+            return new RequestResult$1(new Promise(() => {}), {});
+        }
         if (requestOptions?.uploadProgress) {
             return xhrRequest(url, requestOptions);
         }
@@ -2875,9 +2878,6 @@ class TemplateBuilder {
         this._templateView.addSubView(view);
         return root;
     }
-    createTemplate(render) {
-        return vm => new TemplateView(vm, render);
-    }
     mapView(mapFn, viewCreator) {
         return this._addReplaceNodeBinding(mapFn, (prevNode) => {
             if (prevNode && prevNode.nodeType !== Node.COMMENT_NODE) {
@@ -2896,11 +2896,21 @@ class TemplateBuilder {
             }
         });
     }
-    if(fn, viewCreator) {
+    map(mapFn, renderFn) {
+        return this.mapView(mapFn, mappedValue => {
+            return new TemplateView(this._value, (t, vm) => {
+                return renderFn(mappedValue, t, vm);
+            });
+        });
+    }
+    ifView(predicate, viewCreator) {
         return this.mapView(
-            value => !!fn(value),
+            value => !!predicate(value),
             enabled => enabled ? viewCreator(this._value) : null
         );
+    }
+    if(predicate, renderFn) {
+        return this.ifView(predicate, vm => new TemplateView(vm, renderFn));
     }
 }
 for (const [ns, tags] of Object.entries(TAG_NAMES)) {
@@ -3044,7 +3054,7 @@ class GapView extends TemplateView {
         return t.li({className}, [
             spinner(t),
             t.div(vm.i18n`Loading more messages …`),
-            t.if(vm => vm.error, t.createTemplate(t => t.strong(vm => vm.error)))
+            t.if(vm => vm.error, t => t.strong(vm => vm.error))
         ]);
     }
 }
@@ -3144,7 +3154,7 @@ class BaseMediaView extends TemplateView {
         }
         return renderMessage(t, vm, [
             t.div({className: "media", style: `max-width: ${vm.width}px`}, children),
-            t.if(vm => vm.error, t.createTemplate((t, vm) => t.p({className: "error"}, vm.error)))
+            t.if(vm => vm.error, t => t.p({className: "error"}, vm.error))
         ]);
     }
 }
@@ -3722,9 +3732,9 @@ class SessionStatusView extends TemplateView {
         }}, [
             spinner(t, {hidden: vm => !vm.isWaiting}),
             t.p(vm => vm.statusLabel),
-            t.if(vm => vm.isConnectNowShown, t.createTemplate(t => t.button({className: "link", onClick: () => vm.connectNow()}, "Retry now"))),
-            t.if(vm => vm.isSecretStorageShown, t.createTemplate(t => t.a({href: vm.setupSessionBackupUrl}, "Go to settings"))),
-            t.if(vm => vm.canDismiss, t.createTemplate(t => t.div({className: "end"}, t.button({className: "dismiss", onClick: () => vm.dismiss()})))),
+            t.if(vm => vm.isConnectNowShown, t => t.button({className: "link", onClick: () => vm.connectNow()}, "Retry now")),
+            t.if(vm => vm.isSecretStorageShown, t => t.a({href: vm.setupSessionBackupUrl}, "Go to settings")),
+            t.if(vm => vm.canDismiss, t => t.div({className: "end"}, t.button({className: "dismiss", onClick: () => vm.dismiss()}))),
         ]);
     }
 }
@@ -3802,12 +3812,12 @@ function renderEnableFieldRow(t, vm, label, callback) {
     ]);
 }
 function renderError(t) {
-    return t.if(vm => vm.error, t.createTemplate((t, vm) => {
+    return t.if(vm => vm.error, (t, vm) => {
         return t.div([
             t.p({className: "error"}, vm => vm.i18n`Could not enable session backup: ${vm.error}.`),
             t.p(vm.i18n`Try double checking that you did not mix up your security key, security phrase and login password as explained above.`)
         ])
-    }));
+    });
 }
 
 class SettingsView extends TemplateView {
@@ -3825,27 +3835,56 @@ class SettingsView extends TemplateView {
                 t.div({className: "content"}, content),
             ]);
         };
+        const settingNodes = [];
+        settingNodes.push(
+            t.h3("Session"),
+            row(vm.i18n`User ID`, vm.userId),
+            row(vm.i18n`Session ID`, vm.deviceId, "code"),
+            row(vm.i18n`Session key`, vm.fingerprintKey, "code")
+        );
+        settingNodes.push(
+            t.h3("Session Backup"),
+            t.view(new SessionBackupSettingsView(vm.sessionBackupViewModel))
+        );
+        settingNodes.push(
+            t.h3("Notifications"),
+            t.map(vm => vm.pushNotifications.supported, (supported, t) => {
+                if (supported === null) {
+                    return t.p(vm.i18n`Loading…`);
+                } else if (supported) {
+                    const label = vm => vm.pushNotifications.enabled ?
+                        vm.i18n`Push notifications are enabled`:
+                        vm.i18n`Push notifications are disabled`;
+                    const buttonLabel = vm => vm.pushNotifications.enabled ?
+                        vm.i18n`Disable`:
+                        vm.i18n`Enable`;
+                    return row(label, t.button({
+                        onClick: () => vm.togglePushNotifications(),
+                        disabled: vm => vm.pushNotifications.updating
+                    }, buttonLabel));
+                } else {
+                    return t.p(vm.i18n`Push notifications are not supported on this browser`);
+                }
+            })
+        );
+        settingNodes.push(
+            t.h3("Preferences"),
+            row(vm.i18n`Scale down images when sending`, this._imageCompressionRange(t, vm)),
+        );
+        settingNodes.push(
+            t.h3("Application"),
+            row(vm.i18n`Version`, version),
+            row(vm.i18n`Storage usage`, vm => `${vm.storageUsage} / ${vm.storageQuota}`),
+            row(vm.i18n`Debug logs`, t.button({onClick: () => vm.exportLogs()}, "Export")),
+            t.p(["Debug logs contain application usage data including your username, the IDs or aliases of the rooms or groups you have visited, the usernames of other users and the names of files you send. They do not contain messages. For more information, review our ",
+                t.a({href: "https://element.io/privacy", target: "_blank", rel: "noopener"}, "privacy policy"), "."]),
+        );
         return t.main({className: "Settings middle"}, [
             t.div({className: "middle-header"}, [
                 t.a({className: "button-utility close-middle", href: vm.closeUrl, title: vm.i18n`Close settings`}),
                 t.h2("Settings")
             ]),
-            t.div({className: "SettingsBody"}, [
-                t.h3("Session"),
-                row(vm.i18n`User ID`, vm.userId),
-                row(vm.i18n`Session ID`, vm.deviceId, "code"),
-                row(vm.i18n`Session key`, vm.fingerprintKey, "code"),
-                t.h3("Session Backup"),
-                t.view(new SessionBackupSettingsView(vm.sessionBackupViewModel)),
-                t.h3("Preferences"),
-                row(vm.i18n`Scale down images when sending`, this._imageCompressionRange(t, vm)),
-                t.h3("Application"),
-                row(vm.i18n`Version`, version),
-                row(vm.i18n`Storage usage`, vm => `${vm.storageUsage} / ${vm.storageQuota}`),
-                row(vm.i18n`Debug logs`, t.button({onClick: () => vm.exportLogs()}, "Export")),
-                t.p(["Debug logs contain application usage data including your username, the IDs or aliases of the rooms or groups you have visited, the usernames of other users and the names of files you send. They do not contain messages. For more information, review our ",
-                    t.a({href: "https://element.io/privacy", target: "_blank", rel: "noopener"}, "privacy policy"), "."]),
-            ])
+            t.div({className: "SettingsBody"}, settingNodes)
         ]);
     }
     _imageCompressionRange(t, vm) {
@@ -3942,7 +3981,7 @@ class LoginView extends TemplateView {
             t.div({className: "logo"}),
             t.div({className: "LoginView form"}, [
                 t.h1([vm.i18n`Sign In`]),
-                t.if(vm => vm.error, t.createTemplate(t => t.div({className: "error"}, vm => vm.error))),
+                t.if(vm => vm.error, t => t.div({className: "error"}, vm => vm.error)),
                 t.form({
                     onSubmit: evnt => {
                         evnt.preventDefault();
@@ -4028,14 +4067,14 @@ class SessionPickerItemView extends TemplateView {
             disabled: vm => vm.isClearing,
             onClick: () => vm.export(),
         }, "Export");
-        const downloadExport = t.if(vm => vm.exportDataUrl, t.createTemplate((t, vm) => {
+        const downloadExport = t.if(vm => vm.exportDataUrl, (t, vm) => {
             return t.a({
                 href: vm.exportDataUrl,
                 download: `brawl-session-${vm.id}.json`,
                 onClick: () => setTimeout(() => vm.clearExport(), 100),
             }, "Download");
-        }));
-        const errorMessage = t.if(vm => vm.error, t.createTemplate(t => t.p({className: "error"}, vm => vm.error)));
+        });
+        const errorMessage = t.if(vm => vm.error, t => t.p({className: "error"}, vm => vm.error));
         return t.li([
             t.a({className: "session-info", href: vm.openUrl}, [
                 t.div({className: `avatar usercolor${vm.avatarColorNumber}`}, vm => vm.avatarInitials),
@@ -4074,7 +4113,7 @@ class SessionPickerView extends TemplateView {
                         href: vm.cancelUrl
                     }, vm.i18n`Sign In`)
                 ]),
-                t.if(vm => vm.loadViewModel, vm => new SessionLoadStatusView(vm.loadViewModel)),
+                t.ifView(vm => vm.loadViewModel, () => new SessionLoadStatusView(vm.loadViewModel)),
                 t.p(hydrogenGithubLink(t))
             ])
         ]);
@@ -4178,6 +4217,7 @@ class ServiceWorkerHandler {
         this._registration = null;
         this._registrationPromise = null;
         this._currentController = null;
+        this.haltRequests = false;
     }
     setNavigation(navigation) {
         this._navigation = navigation;
@@ -4189,10 +4229,12 @@ class ServiceWorkerHandler {
             this._registration = await navigator.serviceWorker.register(path);
             await navigator.serviceWorker.ready;
             this._currentController = navigator.serviceWorker.controller;
-            this._registrationPromise = null;
-            console.log("Service Worker registered");
             this._registration.addEventListener("updatefound", this);
-            this._tryActivateUpdate();
+            this._registrationPromise = null;
+            if (this._registration.waiting && this._registration.active) {
+                this._proposeUpdate();
+            }
+            console.log("Service Worker registered");
         })();
     }
     _onMessage(event) {
@@ -4205,11 +4247,21 @@ class ServiceWorkerHandler {
                 resolve(data.payload);
             }
         }
-        if (data.type === "closeSession") {
+        if (data.type === "hasSessionOpen") {
+            const hasOpen = this._navigation.observe("session").get() === data.payload.sessionId;
+            event.source.postMessage({replyTo: data.id, payload: hasOpen});
+        } else if (data.type === "hasRoomOpen") {
+            const hasSessionOpen = this._navigation.observe("session").get() === data.payload.sessionId;
+            const hasRoomOpen = this._navigation.observe("room").get() === data.payload.roomId;
+            event.source.postMessage({replyTo: data.id, payload: hasSessionOpen && hasRoomOpen});
+        } else if (data.type === "closeSession") {
             const {sessionId} = data.payload;
             this._closeSessionIfNeeded(sessionId).finally(() => {
                 event.source.postMessage({replyTo: data.id});
             });
+        } else if (data.type === "haltRequests") {
+            this.haltRequests = true;
+            event.source.postMessage({replyTo: data.id});
         }
     }
     _closeSessionIfNeeded(sessionId) {
@@ -4229,13 +4281,14 @@ class ServiceWorkerHandler {
             return Promise.resolve();
         }
     }
-    async _tryActivateUpdate() {
-        if (!document.hidden && this._registration.waiting && this._registration.active) {
-            this._registration.waiting.removeEventListener("statechange", this);
-            const version = await this._sendAndWaitForReply("version", null, this._registration.waiting);
-            if (confirm(`Version ${version.version} (${version.buildHash}) is ready to install. Apply now?`)) {
-                this._registration.waiting.postMessage({type: "skipWaiting"});
-            }
+    async _proposeUpdate() {
+        if (document.hidden) {
+            return;
+        }
+        const version = await this._sendAndWaitForReply("version", null, this._registration.waiting);
+        if (confirm(`Version ${version.version} (${version.buildHash}) is available. Reload to apply?`)) {
+            await this._sendAndWaitForReply("haltRequests");
+            this._send("skipWaiting", null, this._registration.waiting);
         }
     }
     handleEvent(event) {
@@ -4245,11 +4298,14 @@ class ServiceWorkerHandler {
                 break;
             case "updatefound":
                 this._registration.installing.addEventListener("statechange", this);
-                this._tryActivateUpdate();
                 break;
-            case "statechange":
-                this._tryActivateUpdate();
+            case "statechange": {
+                if (event.target.state === "installed") {
+                    this._proposeUpdate();
+                    event.target.removeEventListener("statechange", this);
+                }
                 break;
+            }
             case "controllerchange":
                 if (!this._currentController) {
                     this._currentController = navigator.serviceWorker.controller;
@@ -4297,6 +4353,89 @@ class ServiceWorkerHandler {
     }
     async preventConcurrentSessionAccess(sessionId) {
         return this._sendAndWaitForReply("closeSession", {sessionId});
+    }
+    async getRegistration() {
+        if (this._registrationPromise) {
+            await this._registrationPromise;
+        }
+        return this._registration;
+    }
+}
+
+class NotificationService {
+    constructor(serviceWorkerHandler, pushConfig) {
+        this._serviceWorkerHandler = serviceWorkerHandler;
+        this._pushConfig = pushConfig;
+    }
+    async enablePush(pusherFactory, defaultPayload) {
+        const registration = await this._serviceWorkerHandler?.getRegistration();
+        if (registration?.pushManager) {
+            const subscription = await registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: this._pushConfig.applicationServerKey,
+            });
+            const subscriptionData = subscription.toJSON();
+            const pushkey = subscriptionData.keys.p256dh;
+            const data = {
+                endpoint: subscriptionData.endpoint,
+                auth: subscriptionData.keys.auth,
+                default_payload: defaultPayload
+            };
+            return pusherFactory.httpPusher(
+                this._pushConfig.gatewayUrl,
+                this._pushConfig.appId,
+                pushkey,
+                data
+            );
+        }
+    }
+    async disablePush() {
+        const registration = await this._serviceWorkerHandler?.getRegistration();
+        if (registration?.pushManager) {
+            const subscription = await registration.pushManager.getSubscription();
+            if (subscription) {
+                await subscription.unsubscribe();
+            }
+        }
+    }
+    async isPushEnabled() {
+        const registration = await this._serviceWorkerHandler?.getRegistration();
+        if (registration?.pushManager) {
+            const subscription = await registration.pushManager.getSubscription();
+            return !!subscription;
+        }
+        return false;
+    }
+    async supportsPush() {
+        if (!this._pushConfig) {
+            return false;
+        }
+        const registration = await this._serviceWorkerHandler?.getRegistration();
+        return registration && "pushManager" in registration;
+    }
+    async enableNotifications() {
+        if ("Notification" in window) {
+            return (await Notification.requestPermission()) === "granted";
+        }
+        return false;
+    }
+    async supportsNotifications() {
+        return "Notification" in window;
+    }
+    async areNotificationsEnabled() {
+        if ("Notification" in window) {
+            return Notification.permission === "granted";
+        } else {
+            return false;
+        }
+    }
+    async showNotification(title, body = undefined) {
+        if ("Notification" in window) {
+            new Notification(title, {body});
+            return;
+        }
+        const registration = await this._serviceWorkerHandler?.getRegistration();
+        registration?.showNotification(title, {body});
     }
 }
 
@@ -5184,17 +5323,17 @@ function relPath(path, basePath) {
     const dirCount = dir.length ? dir.split("/").length : 0;
     return "../".repeat(dirCount) + path;
 }
-async function loadOlmWorker(paths) {
-    const workerPool = new WorkerPool(paths.worker, 4);
+async function loadOlmWorker(config) {
+    const workerPool = new WorkerPool(config.worker, 4);
     await workerPool.init();
-    const path = relPath(paths.olm.legacyBundle, paths.worker);
+    const path = relPath(config.olm.legacyBundle, config.worker);
     await workerPool.sendAll({type: "load_olm", path});
     const olmWorker = new OlmWorker(workerPool);
     return olmWorker;
 }
 class Platform {
-    constructor(container, paths, cryptoExtras = null, options = null) {
-        this._paths = paths;
+    constructor(container, config, cryptoExtras = null, options = null) {
+        this._config = config;
         this._container = container;
         this.settingsStorage = new SettingsStorage("hydrogen_setting_v1_");
         this.clock = new Clock();
@@ -5208,16 +5347,17 @@ class Platform {
         this.history = new History();
         this.onlineStatus = new OnlineStatus();
         this._serviceWorkerHandler = null;
-        if (paths.serviceWorker && "serviceWorker" in navigator) {
+        if (config.serviceWorker && "serviceWorker" in navigator) {
             this._serviceWorkerHandler = new ServiceWorkerHandler();
-            this._serviceWorkerHandler.registerAndStart(paths.serviceWorker);
+            this._serviceWorkerHandler.registerAndStart(config.serviceWorker);
         }
+        this.notificationService = new NotificationService(this._serviceWorkerHandler, config.push);
         this.crypto = new Crypto(cryptoExtras);
         this.storageFactory = new StorageFactory(this._serviceWorkerHandler);
         this.sessionInfoStorage = new SessionInfoStorage("hydrogen_sessions_v1");
         this.estimateStorageUsage = estimateStorageUsage;
         if (typeof fetch === "function") {
-            this.request = createFetchRequest(this.clock.createTimeout);
+            this.request = createFetchRequest(this.clock.createTimeout, this._serviceWorkerHandler);
         } else {
             this.request = xhrRequest;
         }
@@ -5228,11 +5368,11 @@ class Platform {
         return this._serviceWorkerHandler;
     }
     loadOlm() {
-        return loadOlm(this._paths.olm);
+        return loadOlm(this._config.olm);
     }
     async loadOlmWorker() {
         if (!window.WebAssembly) {
-            return await loadOlmWorker(this._paths);
+            return await loadOlmWorker(this._config);
         }
     }
     createAndMountRootView(vm) {
@@ -5253,7 +5393,7 @@ class Platform {
         if (navigator.msSaveBlob) {
             navigator.msSaveBlob(blobHandle.nativeBlob, filename);
         } else {
-            downloadInIframe(this._container, this._paths.downloadSandbox, blobHandle, filename);
+            downloadInIframe(this._container, this._config.downloadSandbox, blobHandle, filename);
         }
     }
     openFile(mimeType = null) {
@@ -5514,6 +5654,9 @@ class HomeServerApi {
     }
     uploadAttachment(blob, filename, options = null) {
         return this._authedRequest("POST", `${this._homeserver}/_matrix/media/r0/upload`, {filename}, blob, options);
+    }
+    setPusher(pusher, options = null) {
+        return this._post("/pushers/set", null, pusher, options);
     }
 }
 
@@ -9473,6 +9616,42 @@ class DecryptionRequest {
     }
 }
 
+class Pusher {
+    constructor(description) {
+        this._description = description;
+    }
+    static httpPusher(host, appId, pushkey, data) {
+        return new Pusher({
+            kind: "http",
+            append: true,
+            data: Object.assign({}, data, {url: host + "/_matrix/push/v1/notify"}),
+            pushkey,
+            app_id: appId,
+            app_display_name: "Hydrogen",
+            device_display_name: "Hydrogen",
+            lang: "en"
+        });
+    }
+    static createDefaultPayload(sessionId) {
+        return {session_id: sessionId};
+    }
+    async enable(hsApi, log) {
+        try {
+            log.set("endpoint", new URL(this._description.data.endpoint).host);
+        } catch {
+            log.set("endpoint", null);
+        }
+        await hsApi.setPusher(this._description, {log}).response();
+    }
+    async disable(hsApi, log) {
+        const deleteDescription = Object.assign({}, this._description, {kind: null});
+        await hsApi.setPusher(deleteDescription, {log}).response();
+    }
+    serialize() {
+        return this._description;
+    }
+}
+
 class User {
     constructor(userId) {
         this._userId = userId;
@@ -11942,6 +12121,7 @@ class SecretStorage {
 }
 
 const PICKLE_KEY = "DEFAULT_KEY";
+const PUSHER_KEY = "pusher";
 class Session$1 {
     constructor({storage, hsApi, sessionInfo, olm, olmWorker, platform, mediaRepository}) {
         this._platform = platform;
@@ -12285,6 +12465,52 @@ class Session$1 {
     get user() {
         return this._user;
     }
+    enablePushNotifications(enable) {
+        if (enable) {
+            return this._enablePush();
+        } else {
+            return this._disablePush();
+        }
+    }
+    async _enablePush() {
+        return this._platform.logger.run("enablePush", async log => {
+            const defaultPayload = Pusher.createDefaultPayload(this._sessionInfo.id);
+            const pusher = await this._platform.notificationService.enablePush(Pusher, defaultPayload);
+            if (!pusher) {
+                log.set("no_pusher", true);
+                return false;
+            }
+            await pusher.enable(this._hsApi, log);
+            const txn = await this._storage.readWriteTxn([this._storage.storeNames.session]);
+            txn.session.set(PUSHER_KEY, pusher.serialize());
+            await txn.complete();
+            return true;
+        });
+    }
+    async _disablePush() {
+        return this._platform.logger.run("disablePush", async log => {
+            await this._platform.notificationService.disablePush();
+            const readTxn = await this._storage.readTxn([this._storage.storeNames.session]);
+            const pusherData = await readTxn.session.get(PUSHER_KEY);
+            if (!pusherData) {
+                return true;
+            }
+            const pusher = new Pusher(pusherData);
+            await pusher.disable(this._hsApi, log);
+            const txn = await this._storage.readWriteTxn([this._storage.storeNames.session]);
+            txn.session.remove(PUSHER_KEY);
+            await txn.complete();
+            return true;
+        });
+    }
+    async arePushNotificationsEnabled() {
+        if (!await this._platform.notificationService.isPushEnabled()) {
+            return false;
+        }
+        const readTxn = await this._storage.readTxn([this._storage.storeNames.session]);
+        const pusherData = await readTxn.session.get(PUSHER_KEY);
+        return !!pusherData;
+    }
 }
 
 const LoadStatus = createEnum(
@@ -12417,6 +12643,7 @@ class SessionContainer {
         this._sessionId = sessionInfo.id;
         this._storage = await this._platform.storageFactory.create(sessionInfo.id);
         const filteredSessionInfo = {
+            id: sessionInfo.id,
             deviceId: sessionInfo.deviceId,
             userId: sessionInfo.userId,
             homeServer: sessionInfo.homeServer,
@@ -13583,7 +13810,7 @@ class RoomMemberTile extends SimpleTile {
             if (content.avatar_url !== prevContent.avatar_url) {
                 return `${senderName} changed their avatar`;
             } else if (content.displayname !== prevContent.displayname) {
-                return `${senderName} changed their name to ${content.displayname}`;
+                return `${prevContent.displayname} changed their name to ${content.displayname}`;
             }
         } else if (membership === "join") {
             return `${targetName} joined the room`;
@@ -14709,6 +14936,13 @@ class SessionBackupViewModel extends ViewModel {
     }
 }
 
+class PushNotificationStatus {
+    constructor() {
+        this.supported = null;
+        this.enabled = false;
+        this.updating = false;
+    }
+}
 function formatKey(key) {
     const partLength = 4;
     const partCount = Math.ceil(key.length / partLength);
@@ -14730,6 +14964,7 @@ class SettingsViewModel extends ViewModel {
         this.sentImageSizeLimit = null;
         this.minSentImageSizeLimit = 400;
         this.maxSentImageSizeLimit = 4000;
+        this.pushNotifications = new PushNotificationStatus();
     }
     setSentImageSizeLimit(size) {
         if (size > this.maxSentImageSizeLimit || size < this.minSentImageSizeLimit) {
@@ -14744,6 +14979,8 @@ class SettingsViewModel extends ViewModel {
     async load() {
         this._estimate = await this.platform.estimateStorageUsage();
         this.sentImageSizeLimit = await this.platform.settingsStorage.getInt("sentImageSizeLimit");
+        this.pushNotifications.supported = await this.platform.notificationService.supportsPush();
+        this.pushNotifications.enabled = await this._session.arePushNotificationsEnabled();
         this.emitChange("");
     }
     get closeUrl() {
@@ -14790,6 +15027,21 @@ class SettingsViewModel extends ViewModel {
     async exportLogs() {
         const logExport = await this.logger.export();
         this.platform.saveFileAs(logExport.asBlob(), `hydrogen-logs-${this.platform.clock.now()}.json`);
+    }
+    async togglePushNotifications() {
+        this.pushNotifications.updating = true;
+        this.emitChange("pushNotifications.updating");
+        try {
+            if (await this._session.enablePushNotifications(!this.pushNotifications.enabled)) {
+                this.pushNotifications.enabled = !this.pushNotifications.enabled;
+                if (this.pushNotifications.enabled) {
+                    this.platform.notificationService.showNotification(this.i18n`Push notifications are now enabled`);
+                }
+            }
+        } finally {
+        this.pushNotifications.updating = false;
+            this.emitChange("pushNotifications.updating");
+        }
     }
 }
 

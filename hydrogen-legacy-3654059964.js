@@ -15475,11 +15475,19 @@ var hydrogen = (function (exports) {
 	  return RequestResult;
 	}();
 
-	function createFetchRequest(createTimeout) {
+	function createFetchRequest(createTimeout, serviceWorkerHandler) {
 	  return function fetchRequest(url, requestOptions) {
 	    var _body;
 
-	    // fetch doesn't do upload progress yet, delegate to xhr
+	    if (serviceWorkerHandler === null || serviceWorkerHandler === void 0 ? void 0 : serviceWorkerHandler.haltRequests) {
+	      // prevent any requests while waiting
+	      // for the new service worker to get activated.
+	      // Once this happens, the page will be reloaded
+	      // by the serviceWorkerHandler so this is fine.
+	      return new RequestResult$1(new Promise(function () {}), {});
+	    } // fetch doesn't do upload progress yet, delegate to xhr
+
+
 	    if (requestOptions === null || requestOptions === void 0 ? void 0 : requestOptions.uploadProgress) {
 	      return xhrRequest(url, requestOptions);
 	    }
@@ -21766,14 +21774,6 @@ var hydrogen = (function (exports) {
 	      this._templateView.addSubView(_view);
 
 	      return root;
-	    } // sugar
-
-	  }, {
-	    key: "createTemplate",
-	    value: function createTemplate(render) {
-	      return function (vm) {
-	        return new TemplateView(vm, render);
-	      };
 	    } // map a value to a view, every time the value changes
 
 	  }, {
@@ -21805,17 +21805,39 @@ var hydrogen = (function (exports) {
 	          return document.createComment("node binding placeholder");
 	        }
 	      });
+	    } // Special case of mapView for a TemplateView.
+	    // Always creates a TemplateView, if this is optional depending
+	    // on mappedValue, use `if` or `mapView`
+
+	  }, {
+	    key: "map",
+	    value: function map(mapFn, renderFn) {
+	      var _this5 = this;
+
+	      return this.mapView(mapFn, function (mappedValue) {
+	        return new TemplateView(_this5._value, function (t, vm) {
+	          return renderFn(mappedValue, t, vm);
+	        });
+	      });
+	    }
+	  }, {
+	    key: "ifView",
+	    value: function ifView(predicate, viewCreator) {
+	      var _this6 = this;
+
+	      return this.mapView(function (value) {
+	        return !!predicate(value);
+	      }, function (enabled) {
+	        return enabled ? viewCreator(_this6._value) : null;
+	      });
 	    } // creates a conditional subtemplate
+	    // use mapView if you need to map to a different view class
 
 	  }, {
 	    key: "if",
-	    value: function _if(fn, viewCreator) {
-	      var _this5 = this;
-
-	      return this.mapView(function (value) {
-	        return !!fn(value);
-	      }, function (enabled) {
-	        return enabled ? viewCreator(_this5._value) : null;
+	    value: function _if(predicate, renderFn) {
+	      return this.ifView(predicate, function (vm) {
+	        return new TemplateView(vm, renderFn);
 	      });
 	    }
 	  }, {
@@ -22230,11 +22252,11 @@ var hydrogen = (function (exports) {
 	        className: className
 	      }, [spinner(t), t.div(vm.i18n(_templateObject$1())), t.if(function (vm) {
 	        return vm.error;
-	      }, t.createTemplate(function (t) {
+	      }, function (t) {
 	        return t.strong(function (vm) {
 	          return vm.error;
 	        });
-	      }))]);
+	      })]);
 	    }
 	  }]);
 
@@ -22477,11 +22499,11 @@ var hydrogen = (function (exports) {
 	        style: "max-width: ".concat(vm.width, "px")
 	      }, children), t.if(function (vm) {
 	        return vm.error;
-	      }, t.createTemplate(function (t, vm) {
+	      }, function (t) {
 	        return t.p({
 	          className: "error"
 	        }, vm.error);
-	      }))]);
+	      })]);
 	    }
 	  }]);
 
@@ -23793,22 +23815,22 @@ var hydrogen = (function (exports) {
 	        return vm.statusLabel;
 	      }), t.if(function (vm) {
 	        return vm.isConnectNowShown;
-	      }, t.createTemplate(function (t) {
+	      }, function (t) {
 	        return t.button({
 	          className: "link",
 	          onClick: function onClick() {
 	            return vm.connectNow();
 	          }
 	        }, "Retry now");
-	      })), t.if(function (vm) {
+	      }), t.if(function (vm) {
 	        return vm.isSecretStorageShown;
-	      }, t.createTemplate(function (t) {
+	      }, function (t) {
 	        return t.a({
 	          href: vm.setupSessionBackupUrl
 	        }, "Go to settings");
-	      })), t.if(function (vm) {
+	      }), t.if(function (vm) {
 	        return vm.canDismiss;
-	      }, t.createTemplate(function (t) {
+	      }, function (t) {
 	        return t.div({
 	          className: "end"
 	        }, t.button({
@@ -23817,7 +23839,7 @@ var hydrogen = (function (exports) {
 	            return vm.dismiss();
 	          }
 	        }));
-	      }))]);
+	      })]);
 	    }
 	  }]);
 
@@ -24157,17 +24179,77 @@ var hydrogen = (function (exports) {
 	function renderError(t) {
 	  return t.if(function (vm) {
 	    return vm.error;
-	  }, t.createTemplate(function (t, vm) {
+	  }, function (t, vm) {
 	    return t.div([t.p({
 	      className: "error"
 	    }, function (vm) {
 	      return vm.i18n(_templateObject14(), vm.error);
 	    }), t.p(vm.i18n(_templateObject15()))]);
-	  }));
+	  });
+	}
+
+	function _templateObject17() {
+	  var data = _taggedTemplateLiteral(["no resizing"]);
+
+	  _templateObject17 = function _templateObject17() {
+	    return data;
+	  };
+
+	  return data;
+	}
+
+	function _templateObject16() {
+	  var data = _taggedTemplateLiteral(["resize to ", "px"]);
+
+	  _templateObject16 = function _templateObject16() {
+	    return data;
+	  };
+
+	  return data;
+	}
+
+	function _templateObject15$1() {
+	  var data = _taggedTemplateLiteral(["Close settings"]);
+
+	  _templateObject15$1 = function _templateObject15() {
+	    return data;
+	  };
+
+	  return data;
+	}
+
+	function _templateObject14$1() {
+	  var data = _taggedTemplateLiteral(["Debug logs"]);
+
+	  _templateObject14$1 = function _templateObject14() {
+	    return data;
+	  };
+
+	  return data;
+	}
+
+	function _templateObject13$1() {
+	  var data = _taggedTemplateLiteral(["Storage usage"]);
+
+	  _templateObject13$1 = function _templateObject13() {
+	    return data;
+	  };
+
+	  return data;
+	}
+
+	function _templateObject12$1() {
+	  var data = _taggedTemplateLiteral(["Version"]);
+
+	  _templateObject12$1 = function _templateObject12() {
+	    return data;
+	  };
+
+	  return data;
 	}
 
 	function _templateObject11$1() {
-	  var data = _taggedTemplateLiteral(["no resizing"]);
+	  var data = _taggedTemplateLiteral(["Scale down images when sending"]);
 
 	  _templateObject11$1 = function _templateObject11() {
 	    return data;
@@ -24177,7 +24259,7 @@ var hydrogen = (function (exports) {
 	}
 
 	function _templateObject10$1() {
-	  var data = _taggedTemplateLiteral(["resize to ", "px"]);
+	  var data = _taggedTemplateLiteral(["Push notifications are not supported on this browser"]);
 
 	  _templateObject10$1 = function _templateObject10() {
 	    return data;
@@ -24187,7 +24269,7 @@ var hydrogen = (function (exports) {
 	}
 
 	function _templateObject9$2() {
-	  var data = _taggedTemplateLiteral(["Debug logs"]);
+	  var data = _taggedTemplateLiteral(["Enable"]);
 
 	  _templateObject9$2 = function _templateObject9() {
 	    return data;
@@ -24197,7 +24279,7 @@ var hydrogen = (function (exports) {
 	}
 
 	function _templateObject8$2() {
-	  var data = _taggedTemplateLiteral(["Storage usage"]);
+	  var data = _taggedTemplateLiteral(["Disable"]);
 
 	  _templateObject8$2 = function _templateObject8() {
 	    return data;
@@ -24207,7 +24289,7 @@ var hydrogen = (function (exports) {
 	}
 
 	function _templateObject7$3() {
-	  var data = _taggedTemplateLiteral(["Version"]);
+	  var data = _taggedTemplateLiteral(["Push notifications are disabled"]);
 
 	  _templateObject7$3 = function _templateObject7() {
 	    return data;
@@ -24217,7 +24299,7 @@ var hydrogen = (function (exports) {
 	}
 
 	function _templateObject6$3() {
-	  var data = _taggedTemplateLiteral(["Scale down images when sending"]);
+	  var data = _taggedTemplateLiteral(["Push notifications are enabled"]);
 
 	  _templateObject6$3 = function _templateObject6() {
 	    return data;
@@ -24227,7 +24309,7 @@ var hydrogen = (function (exports) {
 	}
 
 	function _templateObject5$3() {
-	  var data = _taggedTemplateLiteral(["Session key"]);
+	  var data = _taggedTemplateLiteral(["Loading\u2026"]);
 
 	  _templateObject5$3 = function _templateObject5() {
 	    return data;
@@ -24237,7 +24319,7 @@ var hydrogen = (function (exports) {
 	}
 
 	function _templateObject4$3() {
-	  var data = _taggedTemplateLiteral(["Session ID"]);
+	  var data = _taggedTemplateLiteral(["Session key"]);
 
 	  _templateObject4$3 = function _templateObject4() {
 	    return data;
@@ -24247,7 +24329,7 @@ var hydrogen = (function (exports) {
 	}
 
 	function _templateObject3$3() {
-	  var data = _taggedTemplateLiteral(["User ID"]);
+	  var data = _taggedTemplateLiteral(["Session ID"]);
 
 	  _templateObject3$3 = function _templateObject3() {
 	    return data;
@@ -24257,7 +24339,7 @@ var hydrogen = (function (exports) {
 	}
 
 	function _templateObject2$6() {
-	  var data = _taggedTemplateLiteral(["Close settings"]);
+	  var data = _taggedTemplateLiteral(["User ID"]);
 
 	  _templateObject2$6 = function _templateObject2() {
 	    return data;
@@ -24310,19 +24392,39 @@ var hydrogen = (function (exports) {
 	        }, content)]);
 	      };
 
-	      return t.main({
-	        className: "Settings middle"
-	      }, [t.div({
-	        className: "middle-header"
-	      }, [t.a({
-	        className: "button-utility close-middle",
-	        href: vm.closeUrl,
-	        title: vm.i18n(_templateObject2$6())
-	      }), t.h2("Settings")]), t.div({
-	        className: "SettingsBody"
-	      }, [t.h3("Session"), row(vm.i18n(_templateObject3$3()), vm.userId), row(vm.i18n(_templateObject4$3()), vm.deviceId, "code"), row(vm.i18n(_templateObject5$3()), vm.fingerprintKey, "code"), t.h3("Session Backup"), t.view(new SessionBackupSettingsView(vm.sessionBackupViewModel)), t.h3("Preferences"), row(vm.i18n(_templateObject6$3()), this._imageCompressionRange(t, vm)), t.h3("Application"), row(vm.i18n(_templateObject7$3()), version), row(vm.i18n(_templateObject8$2()), function (vm) {
+	      var settingNodes = [];
+	      settingNodes.push(t.h3("Session"), row(vm.i18n(_templateObject2$6()), vm.userId), row(vm.i18n(_templateObject3$3()), vm.deviceId, "code"), row(vm.i18n(_templateObject4$3()), vm.fingerprintKey, "code"));
+	      settingNodes.push(t.h3("Session Backup"), t.view(new SessionBackupSettingsView(vm.sessionBackupViewModel)));
+	      settingNodes.push(t.h3("Notifications"), t.map(function (vm) {
+	        return vm.pushNotifications.supported;
+	      }, function (supported, t) {
+	        if (supported === null) {
+	          return t.p(vm.i18n(_templateObject5$3()));
+	        } else if (supported) {
+	          var label = function label(vm) {
+	            return vm.pushNotifications.enabled ? vm.i18n(_templateObject6$3()) : vm.i18n(_templateObject7$3());
+	          };
+
+	          var buttonLabel = function buttonLabel(vm) {
+	            return vm.pushNotifications.enabled ? vm.i18n(_templateObject8$2()) : vm.i18n(_templateObject9$2());
+	          };
+
+	          return row(label, t.button({
+	            onClick: function onClick() {
+	              return vm.togglePushNotifications();
+	            },
+	            disabled: function disabled(vm) {
+	              return vm.pushNotifications.updating;
+	            }
+	          }, buttonLabel));
+	        } else {
+	          return t.p(vm.i18n(_templateObject10$1()));
+	        }
+	      }));
+	      settingNodes.push(t.h3("Preferences"), row(vm.i18n(_templateObject11$1()), this._imageCompressionRange(t, vm)));
+	      settingNodes.push(t.h3("Application"), row(vm.i18n(_templateObject12$1()), version), row(vm.i18n(_templateObject13$1()), function (vm) {
 	        return "".concat(vm.storageUsage, " / ").concat(vm.storageQuota);
-	      }), row(vm.i18n(_templateObject9$2()), t.button({
+	      }), row(vm.i18n(_templateObject14$1()), t.button({
 	        onClick: function onClick() {
 	          return vm.exportLogs();
 	        }
@@ -24330,7 +24432,18 @@ var hydrogen = (function (exports) {
 	        href: "https://element.io/privacy",
 	        target: "_blank",
 	        rel: "noopener"
-	      }, "privacy policy"), "."])])]);
+	      }, "privacy policy"), "."]));
+	      return t.main({
+	        className: "Settings middle"
+	      }, [t.div({
+	        className: "middle-header"
+	      }, [t.a({
+	        className: "button-utility close-middle",
+	        href: vm.closeUrl,
+	        title: vm.i18n(_templateObject15$1())
+	      }), t.h2("Settings")]), t.div({
+	        className: "SettingsBody"
+	      }, settingNodes)]);
 	    }
 	  }, {
 	    key: "_imageCompressionRange",
@@ -24354,7 +24467,7 @@ var hydrogen = (function (exports) {
 	        onInput: updateSetting,
 	        onChange: updateSetting
 	      }), " ", t.output(function (vm) {
-	        return vm.sentImageSizeLimit ? vm.i18n(_templateObject10$1(), vm.sentImageSizeLimit) : vm.i18n(_templateObject11$1());
+	        return vm.sentImageSizeLimit ? vm.i18n(_templateObject16(), vm.sentImageSizeLimit) : vm.i18n(_templateObject17());
 	      })];
 	    }
 	  }]);
@@ -24620,13 +24733,13 @@ var hydrogen = (function (exports) {
 	        className: "LoginView form"
 	      }, [t.h1([vm.i18n(_templateObject4$4())]), t.if(function (vm) {
 	        return vm.error;
-	      }, t.createTemplate(function (t) {
+	      }, function (t) {
 	        return t.div({
 	          className: "error"
 	        }, function (vm) {
 	          return vm.error;
 	        });
-	      })), t.form({
+	      }), t.form({
 	        onSubmit: function onSubmit(evnt) {
 	          evnt.preventDefault();
 	          vm.login(username.value, password.value, homeserver.value);
@@ -24796,7 +24909,7 @@ var hydrogen = (function (exports) {
 	      }, "Export");
 	      var downloadExport = t.if(function (vm) {
 	        return vm.exportDataUrl;
-	      }, t.createTemplate(function (t, vm) {
+	      }, function (t, vm) {
 	        return t.a({
 	          href: vm.exportDataUrl,
 	          download: "brawl-session-".concat(vm.id, ".json"),
@@ -24806,16 +24919,16 @@ var hydrogen = (function (exports) {
 	            }, 100);
 	          }
 	        }, "Download");
-	      }));
+	      });
 	      var errorMessage = t.if(function (vm) {
 	        return vm.error;
-	      }, t.createTemplate(function (t) {
+	      }, function (t) {
 	        return t.p({
 	          className: "error"
 	        }, function (vm) {
 	          return vm.error;
 	        });
-	      }));
+	      });
 	      return t.li([t.a({
 	        className: "session-info",
 	        href: vm.openUrl
@@ -24897,9 +25010,9 @@ var hydrogen = (function (exports) {
 	      }, vm.i18n(_templateObject$f())), t.a({
 	        className: "button-action primary",
 	        href: vm.cancelUrl
-	      }, vm.i18n(_templateObject2$8()))]), t.if(function (vm) {
+	      }, vm.i18n(_templateObject2$8()))]), t.ifView(function (vm) {
 	        return vm.loadViewModel;
-	      }, function (vm) {
+	      }, function () {
 	        return new SessionLoadStatusView(vm.loadViewModel);
 	      }), t.p(hydrogenGithubLink(t))])]);
 	    }
@@ -25099,6 +25212,7 @@ var hydrogen = (function (exports) {
 	    this._registration = null;
 	    this._registrationPromise = null;
 	    this._currentController = null;
+	    this.haltRequests = false;
 	  }
 
 	  _createClass(ServiceWorkerHandler, [{
@@ -25128,12 +25242,16 @@ var hydrogen = (function (exports) {
 
 	              case 7:
 	                _this._currentController = navigator.serviceWorker.controller;
-	                _this._registrationPromise = null;
-	                console.log("Service Worker registered");
 
 	                _this._registration.addEventListener("updatefound", _this);
 
-	                _this._tryActivateUpdate();
+	                _this._registrationPromise = null; // do we have a new service worker waiting to activate?
+
+	                if (_this._registration.waiting && _this._registration.active) {
+	                  _this._proposeUpdate();
+	                }
+
+	                console.log("Service Worker registered");
 
 	              case 12:
 	              case "end":
@@ -25159,13 +25277,32 @@ var hydrogen = (function (exports) {
 	        }
 	      }
 
-	      if (data.type === "closeSession") {
+	      if (data.type === "hasSessionOpen") {
+	        var hasOpen = this._navigation.observe("session").get() === data.payload.sessionId;
+	        event.source.postMessage({
+	          replyTo: data.id,
+	          payload: hasOpen
+	        });
+	      } else if (data.type === "hasRoomOpen") {
+	        var hasSessionOpen = this._navigation.observe("session").get() === data.payload.sessionId;
+	        var hasRoomOpen = this._navigation.observe("room").get() === data.payload.roomId;
+	        event.source.postMessage({
+	          replyTo: data.id,
+	          payload: hasSessionOpen && hasRoomOpen
+	        });
+	      } else if (data.type === "closeSession") {
 	        var sessionId = data.payload.sessionId;
 
 	        this._closeSessionIfNeeded(sessionId).finally(function () {
 	          event.source.postMessage({
 	            replyTo: data.id
 	          });
+	        });
+	      } else if (data.type === "haltRequests") {
+	        // this flag is read in fetch.js
+	        this.haltRequests = true;
+	        event.source.postMessage({
+	          replyTo: data.id
 	        });
 	      }
 	    }
@@ -25195,35 +25332,42 @@ var hydrogen = (function (exports) {
 	      }
 	    }
 	  }, {
-	    key: "_tryActivateUpdate",
+	    key: "_proposeUpdate",
 	    value: function () {
-	      var _tryActivateUpdate2 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee2() {
+	      var _proposeUpdate2 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee2() {
 	        var version;
 	        return regeneratorRuntime.wrap(function _callee2$(_context2) {
 	          while (1) {
 	            switch (_context2.prev = _context2.next) {
 	              case 0:
-	                if (!(!document.hidden && this._registration.waiting && this._registration.active)) {
-	                  _context2.next = 6;
+	                if (!document.hidden) {
+	                  _context2.next = 2;
 	                  break;
 	                }
 
-	                this._registration.waiting.removeEventListener("statechange", this);
+	                return _context2.abrupt("return");
 
+	              case 2:
 	                _context2.next = 4;
 	                return this._sendAndWaitForReply("version", null, this._registration.waiting);
 
 	              case 4:
 	                version = _context2.sent;
 
-	                if (confirm("Version ".concat(version.version, " (").concat(version.buildHash, ") is ready to install. Apply now?"))) {
-	                  this._registration.waiting.postMessage({
-	                    type: "skipWaiting"
-	                  }); // will trigger controllerchange event
-
+	                if (!confirm("Version ".concat(version.version, " (").concat(version.buildHash, ") is available. Reload to apply?"))) {
+	                  _context2.next = 9;
+	                  break;
 	                }
 
-	              case 6:
+	                _context2.next = 8;
+	                return this._sendAndWaitForReply("haltRequests");
+
+	              case 8:
+	                // only once all requests are blocked, ask the new
+	                // service worker to skipWaiting
+	                this._send("skipWaiting", null, this._registration.waiting);
+
+	              case 9:
 	              case "end":
 	                return _context2.stop();
 	            }
@@ -25231,11 +25375,11 @@ var hydrogen = (function (exports) {
 	        }, _callee2, this);
 	      }));
 
-	      function _tryActivateUpdate() {
-	        return _tryActivateUpdate2.apply(this, arguments);
+	      function _proposeUpdate() {
+	        return _proposeUpdate2.apply(this, arguments);
 	      }
 
-	      return _tryActivateUpdate;
+	      return _proposeUpdate;
 	    }()
 	  }, {
 	    key: "handleEvent",
@@ -25249,14 +25393,18 @@ var hydrogen = (function (exports) {
 	        case "updatefound":
 	          this._registration.installing.addEventListener("statechange", this);
 
-	          this._tryActivateUpdate();
-
 	          break;
 
 	        case "statechange":
-	          this._tryActivateUpdate();
+	          {
+	            if (event.target.state === "installed") {
+	              this._proposeUpdate();
 
-	          break;
+	              event.target.removeEventListener("statechange", this);
+	            }
+
+	            break;
+	          }
 
 	        case "controllerchange":
 	          if (!this._currentController) {
@@ -25267,7 +25415,7 @@ var hydrogen = (function (exports) {
 	          } else {
 	            // active service worker changed,
 	            // refresh, so we can get all assets 
-	            // (and not some if we would not refresh)
+	            // (and not only some if we would not refresh)
 	            // up to date from it
 	            document.location.reload();
 	          }
@@ -25438,6 +25586,39 @@ var hydrogen = (function (exports) {
 	      return preventConcurrentSessionAccess;
 	    }()
 	  }, {
+	    key: "getRegistration",
+	    value: function () {
+	      var _getRegistration = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee7() {
+	        return regeneratorRuntime.wrap(function _callee7$(_context7) {
+	          while (1) {
+	            switch (_context7.prev = _context7.next) {
+	              case 0:
+	                if (!this._registrationPromise) {
+	                  _context7.next = 3;
+	                  break;
+	                }
+
+	                _context7.next = 3;
+	                return this._registrationPromise;
+
+	              case 3:
+	                return _context7.abrupt("return", this._registration);
+
+	              case 4:
+	              case "end":
+	                return _context7.stop();
+	            }
+	          }
+	        }, _callee7, this);
+	      }));
+
+	      function getRegistration() {
+	        return _getRegistration.apply(this, arguments);
+	      }
+
+	      return getRegistration;
+	    }()
+	  }, {
 	    key: "version",
 	    get: function get() {
 	      return window.HYDROGEN_VERSION;
@@ -25450,6 +25631,365 @@ var hydrogen = (function (exports) {
 	  }]);
 
 	  return ServiceWorkerHandler;
+	}();
+
+	/*
+	Copyright 2021 The Matrix.org Foundation C.I.C.
+
+	Licensed under the Apache License, Version 2.0 (the "License");
+	you may not use this file except in compliance with the License.
+	You may obtain a copy of the License at
+
+	    http://www.apache.org/licenses/LICENSE-2.0
+
+	Unless required by applicable law or agreed to in writing, software
+	distributed under the License is distributed on an "AS IS" BASIS,
+	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	See the License for the specific language governing permissions and
+	limitations under the License.
+	*/
+	var NotificationService = /*#__PURE__*/function () {
+	  function NotificationService(serviceWorkerHandler, pushConfig) {
+	    _classCallCheck(this, NotificationService);
+
+	    this._serviceWorkerHandler = serviceWorkerHandler;
+	    this._pushConfig = pushConfig;
+	  }
+
+	  _createClass(NotificationService, [{
+	    key: "enablePush",
+	    value: function () {
+	      var _enablePush = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee(pusherFactory, defaultPayload) {
+	        var _this$_serviceWorkerH;
+
+	        var registration, subscription, subscriptionData, pushkey, data;
+	        return regeneratorRuntime.wrap(function _callee$(_context) {
+	          while (1) {
+	            switch (_context.prev = _context.next) {
+	              case 0:
+	                _context.next = 2;
+	                return (_this$_serviceWorkerH = this._serviceWorkerHandler) === null || _this$_serviceWorkerH === void 0 ? void 0 : _this$_serviceWorkerH.getRegistration();
+
+	              case 2:
+	                registration = _context.sent;
+
+	                if (!(registration === null || registration === void 0 ? void 0 : registration.pushManager)) {
+	                  _context.next = 11;
+	                  break;
+	                }
+
+	                _context.next = 6;
+	                return registration.pushManager.subscribe({
+	                  userVisibleOnly: true,
+	                  applicationServerKey: this._pushConfig.applicationServerKey
+	                });
+
+	              case 6:
+	                subscription = _context.sent;
+	                subscriptionData = subscription.toJSON();
+	                pushkey = subscriptionData.keys.p256dh;
+	                data = {
+	                  endpoint: subscriptionData.endpoint,
+	                  auth: subscriptionData.keys.auth,
+	                  default_payload: defaultPayload
+	                };
+	                return _context.abrupt("return", pusherFactory.httpPusher(this._pushConfig.gatewayUrl, this._pushConfig.appId, pushkey, data));
+
+	              case 11:
+	              case "end":
+	                return _context.stop();
+	            }
+	          }
+	        }, _callee, this);
+	      }));
+
+	      function enablePush(_x, _x2) {
+	        return _enablePush.apply(this, arguments);
+	      }
+
+	      return enablePush;
+	    }()
+	  }, {
+	    key: "disablePush",
+	    value: function () {
+	      var _disablePush = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee2() {
+	        var _this$_serviceWorkerH2;
+
+	        var registration, subscription;
+	        return regeneratorRuntime.wrap(function _callee2$(_context2) {
+	          while (1) {
+	            switch (_context2.prev = _context2.next) {
+	              case 0:
+	                _context2.next = 2;
+	                return (_this$_serviceWorkerH2 = this._serviceWorkerHandler) === null || _this$_serviceWorkerH2 === void 0 ? void 0 : _this$_serviceWorkerH2.getRegistration();
+
+	              case 2:
+	                registration = _context2.sent;
+
+	                if (!(registration === null || registration === void 0 ? void 0 : registration.pushManager)) {
+	                  _context2.next = 10;
+	                  break;
+	                }
+
+	                _context2.next = 6;
+	                return registration.pushManager.getSubscription();
+
+	              case 6:
+	                subscription = _context2.sent;
+
+	                if (!subscription) {
+	                  _context2.next = 10;
+	                  break;
+	                }
+
+	                _context2.next = 10;
+	                return subscription.unsubscribe();
+
+	              case 10:
+	              case "end":
+	                return _context2.stop();
+	            }
+	          }
+	        }, _callee2, this);
+	      }));
+
+	      function disablePush() {
+	        return _disablePush.apply(this, arguments);
+	      }
+
+	      return disablePush;
+	    }()
+	  }, {
+	    key: "isPushEnabled",
+	    value: function () {
+	      var _isPushEnabled = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee3() {
+	        var _this$_serviceWorkerH3;
+
+	        var registration, subscription;
+	        return regeneratorRuntime.wrap(function _callee3$(_context3) {
+	          while (1) {
+	            switch (_context3.prev = _context3.next) {
+	              case 0:
+	                _context3.next = 2;
+	                return (_this$_serviceWorkerH3 = this._serviceWorkerHandler) === null || _this$_serviceWorkerH3 === void 0 ? void 0 : _this$_serviceWorkerH3.getRegistration();
+
+	              case 2:
+	                registration = _context3.sent;
+
+	                if (!(registration === null || registration === void 0 ? void 0 : registration.pushManager)) {
+	                  _context3.next = 8;
+	                  break;
+	                }
+
+	                _context3.next = 6;
+	                return registration.pushManager.getSubscription();
+
+	              case 6:
+	                subscription = _context3.sent;
+	                return _context3.abrupt("return", !!subscription);
+
+	              case 8:
+	                return _context3.abrupt("return", false);
+
+	              case 9:
+	              case "end":
+	                return _context3.stop();
+	            }
+	          }
+	        }, _callee3, this);
+	      }));
+
+	      function isPushEnabled() {
+	        return _isPushEnabled.apply(this, arguments);
+	      }
+
+	      return isPushEnabled;
+	    }()
+	  }, {
+	    key: "supportsPush",
+	    value: function () {
+	      var _supportsPush = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee4() {
+	        var _this$_serviceWorkerH4;
+
+	        var registration;
+	        return regeneratorRuntime.wrap(function _callee4$(_context4) {
+	          while (1) {
+	            switch (_context4.prev = _context4.next) {
+	              case 0:
+	                if (this._pushConfig) {
+	                  _context4.next = 2;
+	                  break;
+	                }
+
+	                return _context4.abrupt("return", false);
+
+	              case 2:
+	                _context4.next = 4;
+	                return (_this$_serviceWorkerH4 = this._serviceWorkerHandler) === null || _this$_serviceWorkerH4 === void 0 ? void 0 : _this$_serviceWorkerH4.getRegistration();
+
+	              case 4:
+	                registration = _context4.sent;
+	                return _context4.abrupt("return", registration && "pushManager" in registration);
+
+	              case 6:
+	              case "end":
+	                return _context4.stop();
+	            }
+	          }
+	        }, _callee4, this);
+	      }));
+
+	      function supportsPush() {
+	        return _supportsPush.apply(this, arguments);
+	      }
+
+	      return supportsPush;
+	    }()
+	  }, {
+	    key: "enableNotifications",
+	    value: function () {
+	      var _enableNotifications = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee5() {
+	        return regeneratorRuntime.wrap(function _callee5$(_context5) {
+	          while (1) {
+	            switch (_context5.prev = _context5.next) {
+	              case 0:
+	                if (!("Notification" in window)) {
+	                  _context5.next = 5;
+	                  break;
+	                }
+
+	                _context5.next = 3;
+	                return Notification.requestPermission();
+
+	              case 3:
+	                _context5.t0 = _context5.sent;
+	                return _context5.abrupt("return", _context5.t0 === "granted");
+
+	              case 5:
+	                return _context5.abrupt("return", false);
+
+	              case 6:
+	              case "end":
+	                return _context5.stop();
+	            }
+	          }
+	        }, _callee5);
+	      }));
+
+	      function enableNotifications() {
+	        return _enableNotifications.apply(this, arguments);
+	      }
+
+	      return enableNotifications;
+	    }()
+	  }, {
+	    key: "supportsNotifications",
+	    value: function () {
+	      var _supportsNotifications = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee6() {
+	        return regeneratorRuntime.wrap(function _callee6$(_context6) {
+	          while (1) {
+	            switch (_context6.prev = _context6.next) {
+	              case 0:
+	                return _context6.abrupt("return", "Notification" in window);
+
+	              case 1:
+	              case "end":
+	                return _context6.stop();
+	            }
+	          }
+	        }, _callee6);
+	      }));
+
+	      function supportsNotifications() {
+	        return _supportsNotifications.apply(this, arguments);
+	      }
+
+	      return supportsNotifications;
+	    }()
+	  }, {
+	    key: "areNotificationsEnabled",
+	    value: function () {
+	      var _areNotificationsEnabled = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee7() {
+	        return regeneratorRuntime.wrap(function _callee7$(_context7) {
+	          while (1) {
+	            switch (_context7.prev = _context7.next) {
+	              case 0:
+	                if (!("Notification" in window)) {
+	                  _context7.next = 4;
+	                  break;
+	                }
+
+	                return _context7.abrupt("return", Notification.permission === "granted");
+
+	              case 4:
+	                return _context7.abrupt("return", false);
+
+	              case 5:
+	              case "end":
+	                return _context7.stop();
+	            }
+	          }
+	        }, _callee7);
+	      }));
+
+	      function areNotificationsEnabled() {
+	        return _areNotificationsEnabled.apply(this, arguments);
+	      }
+
+	      return areNotificationsEnabled;
+	    }()
+	  }, {
+	    key: "showNotification",
+	    value: function () {
+	      var _showNotification = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee8(title) {
+	        var _this$_serviceWorkerH5;
+
+	        var body,
+	            registration,
+	            _args8 = arguments;
+	        return regeneratorRuntime.wrap(function _callee8$(_context8) {
+	          while (1) {
+	            switch (_context8.prev = _context8.next) {
+	              case 0:
+	                body = _args8.length > 1 && _args8[1] !== undefined ? _args8[1] : undefined;
+
+	                if (!("Notification" in window)) {
+	                  _context8.next = 4;
+	                  break;
+	                }
+
+	                new Notification(title, {
+	                  body: body
+	                });
+	                return _context8.abrupt("return");
+
+	              case 4:
+	                _context8.next = 6;
+	                return (_this$_serviceWorkerH5 = this._serviceWorkerHandler) === null || _this$_serviceWorkerH5 === void 0 ? void 0 : _this$_serviceWorkerH5.getRegistration();
+
+	              case 6:
+	                registration = _context8.sent;
+	                registration === null || registration === void 0 ? void 0 : registration.showNotification(title, {
+	                  body: body
+	                });
+
+	              case 8:
+	              case "end":
+	                return _context8.stop();
+	            }
+	          }
+	        }, _callee8, this);
+	      }));
+
+	      function showNotification(_x3) {
+	        return _showNotification.apply(this, arguments);
+	      }
+
+	      return showNotification;
+	    }()
+	  }]);
+
+	  return NotificationService;
 	}();
 
 	/*
@@ -27594,18 +28134,18 @@ var hydrogen = (function (exports) {
 	}
 
 	function _loadOlmWorker() {
-	  _loadOlmWorker = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee5(paths) {
+	  _loadOlmWorker = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee5(config) {
 	    var workerPool, path, olmWorker;
 	    return regeneratorRuntime.wrap(function _callee5$(_context5) {
 	      while (1) {
 	        switch (_context5.prev = _context5.next) {
 	          case 0:
-	            workerPool = new WorkerPool(paths.worker, 4);
+	            workerPool = new WorkerPool(config.worker, 4);
 	            _context5.next = 3;
 	            return workerPool.init();
 
 	          case 3:
-	            path = relPath(paths.olm.legacyBundle, paths.worker);
+	            path = relPath(config.olm.legacyBundle, config.worker);
 	            _context5.next = 6;
 	            return workerPool.sendAll({
 	              type: "load_olm",
@@ -27627,13 +28167,13 @@ var hydrogen = (function (exports) {
 	}
 
 	var Platform = /*#__PURE__*/function () {
-	  function Platform(container, paths) {
+	  function Platform(container, config) {
 	    var cryptoExtras = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
 	    var options = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : null;
 
 	    _classCallCheck(this, Platform);
 
-	    this._paths = paths;
+	    this._config = config;
 	    this._container = container;
 	    this.settingsStorage = new SettingsStorage("hydrogen_setting_v1_");
 	    this.clock = new Clock();
@@ -27655,19 +28195,20 @@ var hydrogen = (function (exports) {
 	    this.onlineStatus = new OnlineStatus();
 	    this._serviceWorkerHandler = null;
 
-	    if (paths.serviceWorker && "serviceWorker" in navigator) {
+	    if (config.serviceWorker && "serviceWorker" in navigator) {
 	      this._serviceWorkerHandler = new ServiceWorkerHandler();
 
-	      this._serviceWorkerHandler.registerAndStart(paths.serviceWorker);
+	      this._serviceWorkerHandler.registerAndStart(config.serviceWorker);
 	    }
 
+	    this.notificationService = new NotificationService(this._serviceWorkerHandler, config.push);
 	    this.crypto = new Crypto(cryptoExtras);
 	    this.storageFactory = new StorageFactory(this._serviceWorkerHandler);
 	    this.sessionInfoStorage = new SessionInfoStorage("hydrogen_sessions_v1");
 	    this.estimateStorageUsage = estimateStorageUsage;
 
 	    if (typeof fetch === "function") {
-	      this.request = createFetchRequest(this.clock.createTimeout);
+	      this.request = createFetchRequest(this.clock.createTimeout, this._serviceWorkerHandler);
 	    } else {
 	      this.request = xhrRequest;
 	    }
@@ -27679,7 +28220,7 @@ var hydrogen = (function (exports) {
 	  _createClass(Platform, [{
 	    key: "loadOlm",
 	    value: function loadOlm() {
-	      return _loadOlm2(this._paths.olm);
+	      return _loadOlm2(this._config.olm);
 	    }
 	  }, {
 	    key: "loadOlmWorker",
@@ -27695,7 +28236,7 @@ var hydrogen = (function (exports) {
 	                }
 
 	                _context.next = 3;
-	                return _loadOlmWorker2(this._paths);
+	                return _loadOlmWorker2(this._config);
 
 	              case 3:
 	                return _context.abrupt("return", _context.sent);
@@ -27744,7 +28285,7 @@ var hydrogen = (function (exports) {
 	      if (navigator.msSaveBlob) {
 	        navigator.msSaveBlob(blobHandle.nativeBlob, filename);
 	      } else {
-	        downloadInIframe(this._container, this._paths.downloadSandbox, blobHandle, filename);
+	        downloadInIframe(this._container, this._config.downloadSandbox, blobHandle, filename);
 	      }
 	    }
 	  }, {
@@ -28271,6 +28812,12 @@ var hydrogen = (function (exports) {
 	      return this._authedRequest("POST", "".concat(this._homeserver, "/_matrix/media/r0/upload"), {
 	        filename: filename
 	      }, blob, options);
+	    }
+	  }, {
+	    key: "setPusher",
+	    value: function setPusher(pusher) {
+	      var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
+	      return this._post("/pushers/set", null, pusher, options);
 	    }
 	  }]);
 
@@ -38293,6 +38840,111 @@ var hydrogen = (function (exports) {
 	  return DecryptionRequest;
 	}();
 
+	var Pusher = /*#__PURE__*/function () {
+	  function Pusher(description) {
+	    _classCallCheck(this, Pusher);
+
+	    this._description = description;
+	  }
+
+	  _createClass(Pusher, [{
+	    key: "enable",
+	    value: function () {
+	      var _enable = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee(hsApi, log) {
+	        return regeneratorRuntime.wrap(function _callee$(_context) {
+	          while (1) {
+	            switch (_context.prev = _context.next) {
+	              case 0:
+	                try {
+	                  log.set("endpoint", new URL(this._description.data.endpoint).host);
+	                } catch (_unused) {
+	                  log.set("endpoint", null);
+	                }
+
+	                _context.next = 3;
+	                return hsApi.setPusher(this._description, {
+	                  log: log
+	                }).response();
+
+	              case 3:
+	              case "end":
+	                return _context.stop();
+	            }
+	          }
+	        }, _callee, this);
+	      }));
+
+	      function enable(_x, _x2) {
+	        return _enable.apply(this, arguments);
+	      }
+
+	      return enable;
+	    }()
+	  }, {
+	    key: "disable",
+	    value: function () {
+	      var _disable = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee2(hsApi, log) {
+	        var deleteDescription;
+	        return regeneratorRuntime.wrap(function _callee2$(_context2) {
+	          while (1) {
+	            switch (_context2.prev = _context2.next) {
+	              case 0:
+	                deleteDescription = Object.assign({}, this._description, {
+	                  kind: null
+	                });
+	                _context2.next = 3;
+	                return hsApi.setPusher(deleteDescription, {
+	                  log: log
+	                }).response();
+
+	              case 3:
+	              case "end":
+	                return _context2.stop();
+	            }
+	          }
+	        }, _callee2, this);
+	      }));
+
+	      function disable(_x3, _x4) {
+	        return _disable.apply(this, arguments);
+	      }
+
+	      return disable;
+	    }()
+	  }, {
+	    key: "serialize",
+	    value: function serialize() {
+	      return this._description;
+	    }
+	  }], [{
+	    key: "httpPusher",
+	    value: function httpPusher(host, appId, pushkey, data) {
+	      return new Pusher({
+	        kind: "http",
+	        append: true,
+	        // as pushkeys are shared between multiple users on one origin
+	        data: Object.assign({}, data, {
+	          url: host + "/_matrix/push/v1/notify"
+	        }),
+	        pushkey: pushkey,
+	        app_id: appId,
+	        app_display_name: "Hydrogen",
+	        device_display_name: "Hydrogen",
+	        lang: "en"
+	      });
+	    }
+	  }, {
+	    key: "createDefaultPayload",
+	    value: function createDefaultPayload(sessionId) {
+	      return {
+	        session_id: sessionId
+	      };
+	    }
+	  }]);
+
+	  return Pusher;
+	}();
+
 	/*
 	Copyright 2020 Bruno Windels <bruno@windels.cloud>
 
@@ -45600,6 +46252,7 @@ var hydrogen = (function (exports) {
 	}();
 
 	var PICKLE_KEY = "DEFAULT_KEY";
+	var PUSHER_KEY = "pusher";
 	var Session$1 = /*#__PURE__*/function () {
 	  // sessionInfo contains deviceId, userId and homeServer
 	  function Session(_ref) {
@@ -46474,6 +47127,222 @@ var hydrogen = (function (exports) {
 	    /** @internal */
 
 	  }, {
+	    key: "enablePushNotifications",
+	    value: function enablePushNotifications(enable) {
+	      if (enable) {
+	        return this._enablePush();
+	      } else {
+	        return this._disablePush();
+	      }
+	    }
+	  }, {
+	    key: "_enablePush",
+	    value: function () {
+	      var _enablePush2 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee12() {
+	        var _this8 = this;
+
+	        return regeneratorRuntime.wrap(function _callee12$(_context12) {
+	          while (1) {
+	            switch (_context12.prev = _context12.next) {
+	              case 0:
+	                return _context12.abrupt("return", this._platform.logger.run("enablePush", /*#__PURE__*/function () {
+	                  var _ref3 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee11(log) {
+	                    var defaultPayload, pusher, txn;
+	                    return regeneratorRuntime.wrap(function _callee11$(_context11) {
+	                      while (1) {
+	                        switch (_context11.prev = _context11.next) {
+	                          case 0:
+	                            defaultPayload = Pusher.createDefaultPayload(_this8._sessionInfo.id);
+	                            _context11.next = 3;
+	                            return _this8._platform.notificationService.enablePush(Pusher, defaultPayload);
+
+	                          case 3:
+	                            pusher = _context11.sent;
+
+	                            if (pusher) {
+	                              _context11.next = 7;
+	                              break;
+	                            }
+
+	                            log.set("no_pusher", true);
+	                            return _context11.abrupt("return", false);
+
+	                          case 7:
+	                            _context11.next = 9;
+	                            return pusher.enable(_this8._hsApi, log);
+
+	                          case 9:
+	                            _context11.next = 11;
+	                            return _this8._storage.readWriteTxn([_this8._storage.storeNames.session]);
+
+	                          case 11:
+	                            txn = _context11.sent;
+	                            txn.session.set(PUSHER_KEY, pusher.serialize());
+	                            _context11.next = 15;
+	                            return txn.complete();
+
+	                          case 15:
+	                            return _context11.abrupt("return", true);
+
+	                          case 16:
+	                          case "end":
+	                            return _context11.stop();
+	                        }
+	                      }
+	                    }, _callee11);
+	                  }));
+
+	                  return function (_x23) {
+	                    return _ref3.apply(this, arguments);
+	                  };
+	                }()));
+
+	              case 1:
+	              case "end":
+	                return _context12.stop();
+	            }
+	          }
+	        }, _callee12, this);
+	      }));
+
+	      function _enablePush() {
+	        return _enablePush2.apply(this, arguments);
+	      }
+
+	      return _enablePush;
+	    }()
+	  }, {
+	    key: "_disablePush",
+	    value: function () {
+	      var _disablePush2 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee14() {
+	        var _this9 = this;
+
+	        return regeneratorRuntime.wrap(function _callee14$(_context14) {
+	          while (1) {
+	            switch (_context14.prev = _context14.next) {
+	              case 0:
+	                return _context14.abrupt("return", this._platform.logger.run("disablePush", /*#__PURE__*/function () {
+	                  var _ref4 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee13(log) {
+	                    var readTxn, pusherData, pusher, txn;
+	                    return regeneratorRuntime.wrap(function _callee13$(_context13) {
+	                      while (1) {
+	                        switch (_context13.prev = _context13.next) {
+	                          case 0:
+	                            _context13.next = 2;
+	                            return _this9._platform.notificationService.disablePush();
+
+	                          case 2:
+	                            _context13.next = 4;
+	                            return _this9._storage.readTxn([_this9._storage.storeNames.session]);
+
+	                          case 4:
+	                            readTxn = _context13.sent;
+	                            _context13.next = 7;
+	                            return readTxn.session.get(PUSHER_KEY);
+
+	                          case 7:
+	                            pusherData = _context13.sent;
+
+	                            if (pusherData) {
+	                              _context13.next = 10;
+	                              break;
+	                            }
+
+	                            return _context13.abrupt("return", true);
+
+	                          case 10:
+	                            pusher = new Pusher(pusherData);
+	                            _context13.next = 13;
+	                            return pusher.disable(_this9._hsApi, log);
+
+	                          case 13:
+	                            _context13.next = 15;
+	                            return _this9._storage.readWriteTxn([_this9._storage.storeNames.session]);
+
+	                          case 15:
+	                            txn = _context13.sent;
+	                            txn.session.remove(PUSHER_KEY);
+	                            _context13.next = 19;
+	                            return txn.complete();
+
+	                          case 19:
+	                            return _context13.abrupt("return", true);
+
+	                          case 20:
+	                          case "end":
+	                            return _context13.stop();
+	                        }
+	                      }
+	                    }, _callee13);
+	                  }));
+
+	                  return function (_x24) {
+	                    return _ref4.apply(this, arguments);
+	                  };
+	                }()));
+
+	              case 1:
+	              case "end":
+	                return _context14.stop();
+	            }
+	          }
+	        }, _callee14, this);
+	      }));
+
+	      function _disablePush() {
+	        return _disablePush2.apply(this, arguments);
+	      }
+
+	      return _disablePush;
+	    }()
+	  }, {
+	    key: "arePushNotificationsEnabled",
+	    value: function () {
+	      var _arePushNotificationsEnabled = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee15() {
+	        var readTxn, pusherData;
+	        return regeneratorRuntime.wrap(function _callee15$(_context15) {
+	          while (1) {
+	            switch (_context15.prev = _context15.next) {
+	              case 0:
+	                _context15.next = 2;
+	                return this._platform.notificationService.isPushEnabled();
+
+	              case 2:
+	                if (_context15.sent) {
+	                  _context15.next = 4;
+	                  break;
+	                }
+
+	                return _context15.abrupt("return", false);
+
+	              case 4:
+	                _context15.next = 6;
+	                return this._storage.readTxn([this._storage.storeNames.session]);
+
+	              case 6:
+	                readTxn = _context15.sent;
+	                _context15.next = 9;
+	                return readTxn.session.get(PUSHER_KEY);
+
+	              case 9:
+	                pusherData = _context15.sent;
+	                return _context15.abrupt("return", !!pusherData);
+
+	              case 11:
+	              case "end":
+	                return _context15.stop();
+	            }
+	          }
+	        }, _callee15, this);
+	      }));
+
+	      function arePushNotificationsEnabled() {
+	        return _arePushNotificationsEnabled.apply(this, arguments);
+	      }
+
+	      return arePushNotificationsEnabled;
+	    }()
+	  }, {
 	    key: "fingerprintKey",
 	    get: function get() {
 	      var _this$_e2eeAccount;
@@ -46817,6 +47686,7 @@ var hydrogen = (function (exports) {
 	                this._storage = _context6.sent;
 	                // no need to pass access token to session
 	                filteredSessionInfo = {
+	                  id: sessionInfo.id,
 	                  deviceId: sessionInfo.deviceId,
 	                  userId: sessionInfo.userId,
 	                  homeServer: sessionInfo.homeServer
@@ -49398,7 +50268,7 @@ var hydrogen = (function (exports) {
 	        if (content.avatar_url !== prevContent.avatar_url) {
 	          return "".concat(senderName, " changed their avatar");
 	        } else if (content.displayname !== prevContent.displayname) {
-	          return "".concat(senderName, " changed their name to ").concat(content.displayname);
+	          return "".concat(prevContent.displayname, " changed their name to ").concat(content.displayname);
 	        }
 	      } else if (membership === "join") {
 	        return "".concat(targetName, " joined the room");
@@ -51802,8 +52672,18 @@ var hydrogen = (function (exports) {
 	  return SessionBackupViewModel;
 	}(ViewModel);
 
-	function _templateObject2$e() {
+	function _templateObject3$8() {
 	  var data = _taggedTemplateLiteral(["development version"]);
+
+	  _templateObject3$8 = function _templateObject3() {
+	    return data;
+	  };
+
+	  return data;
+	}
+
+	function _templateObject2$e() {
+	  var data = _taggedTemplateLiteral(["Push notifications are now enabled"]);
 
 	  _templateObject2$e = function _templateObject2() {
 	    return data;
@@ -51821,6 +52701,14 @@ var hydrogen = (function (exports) {
 
 	  return data;
 	}
+
+	var PushNotificationStatus = function PushNotificationStatus() {
+	  _classCallCheck(this, PushNotificationStatus);
+
+	  this.supported = null;
+	  this.enabled = false;
+	  this.updating = false;
+	};
 
 	function formatKey(key) {
 	  var partLength = 4;
@@ -51856,6 +52744,7 @@ var hydrogen = (function (exports) {
 	    _this.sentImageSizeLimit = null;
 	    _this.minSentImageSizeLimit = 400;
 	    _this.maxSentImageSizeLimit = 4000;
+	    _this.pushNotifications = new PushNotificationStatus();
 	    return _this;
 	  }
 
@@ -51890,9 +52779,19 @@ var hydrogen = (function (exports) {
 
 	              case 5:
 	                this.sentImageSizeLimit = _context.sent;
+	                _context.next = 8;
+	                return this.platform.notificationService.supportsPush();
+
+	              case 8:
+	                this.pushNotifications.supported = _context.sent;
+	                _context.next = 11;
+	                return this._session.arePushNotificationsEnabled();
+
+	              case 11:
+	                this.pushNotifications.enabled = _context.sent;
 	                this.emitChange("");
 
-	              case 7:
+	              case 13:
 	              case "end":
 	                return _context.stop();
 	            }
@@ -51953,6 +52852,52 @@ var hydrogen = (function (exports) {
 	      return exportLogs;
 	    }()
 	  }, {
+	    key: "togglePushNotifications",
+	    value: function () {
+	      var _togglePushNotifications = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee3() {
+	        return regeneratorRuntime.wrap(function _callee3$(_context3) {
+	          while (1) {
+	            switch (_context3.prev = _context3.next) {
+	              case 0:
+	                this.pushNotifications.updating = true;
+	                this.emitChange("pushNotifications.updating");
+	                _context3.prev = 2;
+	                _context3.next = 5;
+	                return this._session.enablePushNotifications(!this.pushNotifications.enabled);
+
+	              case 5:
+	                if (!_context3.sent) {
+	                  _context3.next = 8;
+	                  break;
+	                }
+
+	                this.pushNotifications.enabled = !this.pushNotifications.enabled;
+
+	                if (this.pushNotifications.enabled) {
+	                  this.platform.notificationService.showNotification(this.i18n(_templateObject2$e()));
+	                }
+
+	              case 8:
+	                _context3.prev = 8;
+	                this.pushNotifications.updating = false;
+	                this.emitChange("pushNotifications.updating");
+	                return _context3.finish(8);
+
+	              case 12:
+	              case "end":
+	                return _context3.stop();
+	            }
+	          }
+	        }, _callee3, this, [[2,, 8, 12]]);
+	      }));
+
+	      function togglePushNotifications() {
+	        return _togglePushNotifications.apply(this, arguments);
+	      }
+
+	      return togglePushNotifications;
+	    }()
+	  }, {
 	    key: "closeUrl",
 	    get: function get() {
 	      return this._closeUrl;
@@ -51981,7 +52926,7 @@ var hydrogen = (function (exports) {
 	        return "".concat(updateService.version, " (").concat(updateService.buildHash, ")");
 	      }
 
-	      return this.i18n(_templateObject2$e());
+	      return this.i18n(_templateObject3$8());
 	    }
 	  }, {
 	    key: "showUpdateButton",
